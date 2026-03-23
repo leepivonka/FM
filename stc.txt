@@ -1,6 +1,6 @@
 ;==============================================================================
 ; 65816 ANS Forth Kernel (STC)
-; Set up to run on WDC w65c265sxb board.
+; Set up to run on WDC w65c265sxb boarddiff
 ; Based on http://forum.6502.org/viewtopic.php?f=9&t=8577
 ;
 ; Architecture:
@@ -14,13 +14,12 @@
 ;	S  (16-bit) Return Stack Pointer (RSP)	  - hardware stack
 ;	D		Direct Page base (UP)	  points to user area
 ;	DB		Data Bank ($00)
+;	Native mode, P.M=16-bit, P.X=16-bit
 ;
 ; STC execution model:
 ;	Each word consists of machine code.
 ;	Calls done with JSR, exits done with RTS.
-;
-; Default is:
-;	Native mode, A=16-bit, X=16-bit, Y=16-bit
+
 
 
 	.p816			;select 65816 CPU
@@ -106,7 +105,7 @@ U_ToIn:		.res 2		; >IN  parse offset in U_ParseBuf
 ; It's OK to have these as per-user even though they don't need to be.
 
 ;-- Scratch variables, default is not preserved across subroutine calls
-W:		.res 2
+W:			.res 2
 Temp0:		.res 2
 Temp2:		.res 2
 Temp4:		.res 2
@@ -126,7 +125,7 @@ TIB_SIZE	= $fe
 TIB_Base:	.res TIB_SIZE	; Terminal Input Buffer
 
 	.align $100 ; page align direct page for best performance
-UserFirst:	.res User_Size	; 1st user area
+UserFirst:	.res User_Size	; 1st user area starts here
 
 ReturnStack:	.res 64
 RSP_INIT	= *-1		; Return stack initial pointer (hardware)
@@ -219,7 +218,6 @@ Swap:	lda 0,X		; b (TOS)
   ; https://forth-standard.org/standard/core/OVER
 Over:	LDA 2,X		; a (NOS)
 	bra PushA	; Push copy of a
-
 
 
  Header "Rot", 0 ; ( a b c -- b c a )
@@ -384,6 +382,10 @@ Negat3:	EOR #$FFFF
 Abs:	LDA 0,X
 	bmi Negat3
 	rts
+
+
+; Header "D+",0 ; ( d1 d2 -- d3 ) double precision add
+; Header "D-",0 ; ( d1 d2 -- d1-d2 ) double precision subtract
 
 
  Header "DNegate",0 ; ( d1 -- -d1 )  return -d1
@@ -556,6 +558,7 @@ Star:	jsr UMStar
 
  Header "UM/MOD", 0 ; ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
   ; Stack: NOS_HI=ud_high NOS=ud_low TOS=u (divisor)
+  ; Quotient overflow gives strange results.
   ; This is a standard 32/16 non-restoring division
   ; https://forth-standard.org/standard/core/UMDivMOD
 UMSlashMod:
@@ -749,10 +752,8 @@ False:	lda #0
   ; Modified name to not conflict with opcode name.
 And1:	LDA 0,X
 	AND 2,X
-And8:	STA 2,X
-	INX
-	INX
-	rts
+	STA 2,X
+	jmp NipA
 
 
  Header "Or",0 ; ( a b -- a|b )
@@ -760,7 +761,7 @@ And8:	STA 2,X
   ; Modified name to not conflict with opcode name.
 Or1:	LDA 0,X
 	ORA 2,X
-	bra And8
+	jmp NipA
 
 
  Header "Xor",0 ; ( a b -- a^b )
@@ -768,7 +769,7 @@ Or1:	LDA 0,X
   ; Modified name to not conflict with opcode name.
 Xor1:	LDA 0,X
 	EOR 2,X
-	bra And8
+	jmp NipA
 
 
  Header "Invert",0 ; ( a -- ~a )
@@ -784,21 +785,24 @@ Invert:	LDA 0,X
 
  Header "@",0 ; ( addr -- val ) fetch cell
   ; https://forth-standard.org/standard/core/Fetch
-Fetch:	lda (0,x)
+Fetch:
+	lda (0,x)
 	sta 0,x
 	rts
 
 
  Header "!", 0 ; ( val addr -- ) store cell
   ; https://forth-standard.org/standard/core/Store
-Store:	lda 2,x		; get val
+Store:
+	lda 2,x		; get val
 	sta (0,x)	; store at addr
 	jmp TwoDrop	; drop addr val
 
 
  Header "C@", 0 ; ( addr -- byte ) fetch byte
   ; https://forth-standard.org/standard/core/CFetch
-CFetch:	sep #P_M
+CFetch:
+	sep #P_M
 	lda (0,x)
 	rep #P_M
 	and #$ff	; zero extend
@@ -808,7 +812,8 @@ CFetch:	sep #P_M
 
  Header "C!", 0 ; ( byte addr -- ) store byte
   ; https://forth-standard.org/standard/core/CStore
-CStore:	LDA 2,X		; get byte
+CStore:
+	LDA 2,X		; get byte
 	sep #P_M	; store at addr
 	sta (0,x)
 	rep #P_M
@@ -837,9 +842,18 @@ TwoStore:
 	jmp ThreeDrop	; 3Drop addr d
 
 
- Header "Move", 0 ; ( src dst u -- ) copy u bytes from src to dst
-  ; https://forth-standard.org/standard/core/MOVE
-Move:	lda 0,x		; u (byte count)
+; Header "+!",ha_Inline ; ( n|u a-addr -- )  Add n | u to the single-cell number at a-addr
+  ; https://forth-standard.org/standard/core/PlusStore
+
+
+; Header "?",0 ; ( a-addr -- )  Display the cell value stored at a-addr.
+  ; https://forth-standard.org/standard/tools/q
+
+
+ Header "CMove", 0 ; ( src dst u -- ) copy u bytes from src to dst ascending
+  ; https://forth-standard.org/standard/string/CMOVE
+CMove:
+	lda 0,x		; u (byte count)
 	beq @9		; Zero count = no-op
 	dec a		; decrement byte count for mvn
 	phx		; save PSP
@@ -854,9 +868,10 @@ Move:	lda 0,x		; u (byte count)
 
  Header "Fill", 0 ; ( caddr u byte -- ) fill u bytes starting at addr with byte
   ; https://forth-standard.org/standard/core/FILL
-Fill:	ldy 2,x		; get u
+Fill:
+	ldy 2,x		; get u
 	beq @9
-	lda 0,X		; byte
+	lda 0,x		; get byte
 	sep #P_M	; P_M= 8bit
 	sta (4,x)	; Save 1st fill byte
 	rep #P_M	; P_M= 16bit
@@ -872,8 +887,50 @@ Fill:	ldy 2,x		; get u
 	plx
 @9:	jmp ThreeDrop	; Drop e u caddr
 
+
+; Header "Erase",0 ; (adr u -- )  Fill with zeros
+  ; https://forth-standard.org/standard/core/ERASE
+
+; Header "Blank",0 ; ( c-addr u -- )  Fill with blanks
+  ; https://forth-standard.org/standard/string/BLANK
+
 ;==============================================================================
 ; SECTION 7: Console I/O
+
+
+  .if 0
+ Header "OBuf",0 ; ( size -- ) Allocate new Mensch M3 output buffer
+OBuf:	lda 0,x
+	ldy U_DP
+	sta a:$3e ; Mensch monitor: SOUTCNT3
+	sty a:$3c ; Mensch monitor: SOUTBUF3
+	stz a:$38 ; Mensch monitor: SOUTINDX3
+	stz a:$3a ; Mensch monitor: SOUTEND3
+	jmp Allot
+   .endif
+   
+
+  .if 0
+ Header "IBuf",0 ; ( size -- )  Allocate new Mensch M3 input buffer
+IBuf:	lda 0,x
+	ldy U_DP
+	jsr IBufA
+	jmp Allot
+   .endif
+ 
+
+  .if 0
+ Header "IBufNorm",0 ; ( -- )  Revert to Mensch M3 input buffer
+IBufNorm:
+	lda #10
+	ldy #ROM_IBUF3
+IBufA:	sta a:$1e ; Mensch monitor: SINCNT3
+	sty a:$1c ; Mensch monitor: SIN_BUF3
+	stz a:$18 ; Mensch monitor: SININDX3
+	stz a:$1a ; Mensch monitor: SINEND3
+	rts
+   .endif
+   
 
  Header "Key",0 ; ( -- char ) receive character (blocking)
   ; https://forth-standard.org/standard/core/KEY
@@ -911,6 +968,10 @@ KeyQA: ; returns P_Z, uses '265 Mensch monitor variables
 	lda a:$43 ;SFLAG3
 	and #1 ;SFLG
 	rts
+
+
+; Header "Emit?",0 ; ( -- flag )  ready to send a char?
+  ; https://forth-standard.org/standard/facility/EMITq
 
 
  Header "Emit",0 ; ( char -- ) transmit character
@@ -1088,7 +1149,7 @@ print_udec: ; subroutine: Print A as unsigned number
 	LDA W		;  until done
 	bne @div_loop
 
-	bra @print8  ; Print digits from stack (they're in reverse order)
+	bra @print8	; Print digits from stack (they're in reverse order)
 @print2: jsr EmitA
 @print8: pla
 	bne @print2
@@ -1122,15 +1183,10 @@ ExecuteA:  ; jmp to (A)
 	rts
 
 
-; Header "0Branch",0 ; ( flag -- ) branch if flag is zero (compiled word)
-;ZBranch:
-
-ZBranchTest: ; ( flag -- )  test flag
-	lda 0,x		; pop flag
-	inx
-	inx
-	tay		; set CPU flags
-	rts
+ Header "Exit",F_Immediate ; ( -- ) compile return from current colon definition
+  ; https://forth-standard.org/standard/core/EXIT
+Exit:	lda #$60	; rts
+	jmp CCommaA
 
 
 ;----------------------------------------------
@@ -1156,6 +1212,18 @@ DoIf: ; ( f -- )  "If" runtime
 	rts
 
 
+; Header "0Branch",0 ; ( flag -- ) branch if flag is zero (compiled word)
+;ZBranch:
+
+
+ZBranchTest: ; ( flag -- )  test flag
+	lda 0,x		; pop flag
+	inx
+	inx
+	tay		; set CPU flags
+	rts
+
+														   
  Header "Else",F_Immediate ; ( patch_addr -- patch2_addr ) Compile "Else"
 Else:	jsr Here	; remember patch2 addr
 	jsr JmpCommaA	; compile jmp abs
@@ -1270,7 +1338,7 @@ PlusLoop:
 	jmp JmpComma	; compile jmp back
 
 
-; Header "(+Loop)",0 ; ( n -- ) (R: limit index -- | limit index+n)  runtime for +LOOP
+; (R: limit index -- | limit index+n)  runtime for +LOOP
 @Run:	lda 0,x		; pop step
 	inx
 	inx
@@ -1319,10 +1387,18 @@ J:	lda 7,s		; 2nd index
 ; SECTION 9: DICTIONARY
 
 
+;  Header "Unused",0 ; ( -- u )  return the space remaining in the region addressed by HERE
+  ; https://forth-standard.org/standard/core/UNUSED
+
+
  Header "Here",0 ; ( -- addr ) current dictionary pointer
   ; https://forth-standard.org/standard/core/HERE
 Here:	lda U_DP
 	jmp PushA
+
+
+; Header "Pad",0 ; ( -- c-addr )  Return transient region
+  ; https://forth-standard.org/standard/core/PAD
 
 
  Header "Allot",0 ; ( n -- ) advance dictionary pointer by n bytes
@@ -1385,12 +1461,6 @@ JmpCommaA:
 	bra CompileComma3
 
 
- Header "Exit",F_Immediate ; ( -- ) compile return from current colon definition
-  ; https://forth-standard.org/standard/core/EXIT
-Exit:	lda #$60	; rts
-	bra CCommaA
-
-
  Header "Lda#,",0 ; ( n -- )  compile lda #
 LdaIComma:
  	lda #$a9		; lda #
@@ -1413,7 +1483,7 @@ StringComma:
 	jsr Swap
 	lda 0,x
 	jsr AllotA
-	jmp Move	; compile chars
+	jmp CMove	; compile chars
 
 
  Header "Header,",0 ; ( addr len -- )  Compile a word header
@@ -1597,6 +1667,13 @@ Variable:
 	jmp CommaA	; allot & init data cell
 
 
+; Header "Smudge",0 ; ( -- )
+
+
+; Header "Immediate",F_Immediate ; ( -- )  Mark latest word as immediate
+  ; https://forth-standard.org/standard/core/IMMEDIATE
+
+
  Header "Create",0 ; ( "name" -- )  Create a word that pushes the addr of it's parameter field
   ; https://forth-standard.org/standard/core/CREATE
 Create: jsr Parse_Name		; get name
@@ -1613,21 +1690,20 @@ Create: jsr Parse_Name		; get name
 
  Header "Does>", F_Immediate ;
   ; https://forth-standard.org/standard/core/DOES
-Does:	jsr Abort ; Stub???
-	rts
+Does:	lda #@DoDoes		; compile jsr @DoDoes
+	jsr CompileCommaA
+				; start compiling code after Does>
+	lda #$1a68		; compile: pla; ina	get addr of body of created word
+	jsr CommaA
+	lda #PushA		; compile jsr PushA
+	jmp CompileCommaA
 
-
-DoDoes: ; Code pointer for DOES> defined words
-  ; Pushes body address, then transfers control to the DOES> code.
-  ; The DOES> code address is stored in the body of the defining word.
-
-	; Push body address of THIS word
-	pla		; rts addr +1 points to address of DODOES.
+@DoDoes:
+	pla			; get addr of code after Does>
 	ina
-	jmp PushA	; Push body address
-
-; The DOES> code address is stored after DoCol saved IP.
-; IP (Y) was set by the caller to point to DOES> code.
+	ldy U_Latest		; patch jsr DoVar compiled by Create
+	sta a:1,y
+	rts			; return to caller of word containing Does>
 
 
  Header '."',F_Immediate ; ( string" -- )  Type a string literal
@@ -1686,7 +1762,7 @@ SQuote: jsr ParseQuote		; get string
 	jsr Swap
 	lda 0,x
 	jsr AllotA
-	jsr Move		; copy string
+	jsr CMove		; copy string
 	jsr RFrom
 	jsr RFrom	; stack caddr & len
 	rts
@@ -1734,10 +1810,10 @@ AbortQRun: ; ( f -- ) runtime code ------
 	inx
 	ply		; skip string
 	tya
-	clc
+	sec
 	adc a:1,y
-	iny
-	phy
+	ina
+	pha
 	rts
 
 @Abort:	ply
@@ -1746,9 +1822,7 @@ AbortQRun: ; ( f -- ) runtime code ------
 	lda a:0,y	; get string length
 	iny		; get string addr
 	iny
-	dex		; push strin addr
-	dex
-	sty 0,x
+	sty 0,x		; push strin addr
 	dex		; push string length
 	dex
 	sta 0,x
@@ -1812,6 +1886,9 @@ Hex:	lda #$10	; User area: BASE = 16
 ; SECTION 11: STRING AND PARSE
 
 
+; Header "Bl",0 ; ( -- n ) ASCII value of space (blank)
+
+
  Header "Count",0 ; ( addr -- addr+1 len ) counted string to addr/len
   ; https://forth-standard.org/standard/core/COUNT
 Count:	lda (0,x)	; get length byte
@@ -1832,6 +1909,10 @@ Bounds:	lda 0,x
 	rts
   .endif
 
+
+; Header "-Trailing",0 ; ( addr n1 -- addr n2 )  trim trailing spaces
+
+; Header "Upper",0 ; ( addr len -- )  Convert chars to uppercase
 
  Header "(",F_Immediate ; (  ccc(paren)  -- )  Comment
   ; https://forth-standard.org/standard/file/p
@@ -2000,15 +2081,16 @@ Number:	stz W		; Accumulator= 0
 
  Header "Bye",0 ; ( -- ) halt the system
   ; https://forth-standard.org/standard/tools/BYE
-Bye:	jml $00e084	; CFA, Reset
+Bye:	jmp $00e084	; Mensch Reset
 
 
  Header "Abort",0 ; ( -- ) reset stacks and go to QUIT
   ; https://forth-standard.org/standard/core/ABORT
 Abort:	jsr PSP_Reset	; reset parm stack
 	jsr DotQuoteRun
-	.word 3
+	.word 5
 	.byte "?",0," " ; this phrase makes the simulator stop copying from an input file
+	.byte $0d,$0a
 	bra Quit
 
 
@@ -2028,6 +2110,7 @@ Quit:	lda #RSP_INIT			; Reset return stack
 	inx
 	inx
 	sta U_ParseLen			; save line size
+	jsr Space			; type a space after the line
 	stz U_ToIn			; init parse offset
 	jsr Interpret			; Interpret the input line
 	lda U_State			; STATE == 0 (interpret mode)?
@@ -2134,7 +2217,8 @@ Semicolon:
 
 
  Header "Dump",0 ; ( caddr len -- )  Dump memory in hex
-Dump:	jsr CR
+Dump:	dec 0,x		; so we stop on zero length remaining
+@line:	jsr CR
 	jsr Over	; print addr
 	jsr DotHex
 	ldy #16		; for 16 bytes
@@ -2148,7 +2232,7 @@ Dump:	jsr CR
 	dey
 	bne @byte
 	lda 0,x		; until done
-	bpl Dump
+	bpl @line
 	jmp TwoDrop
 
 

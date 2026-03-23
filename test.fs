@@ -410,17 +410,17 @@ FBUF 3 20 FILL IsEmpty
   FBuf C@ 20 Is=  FBuf 1+ C@ 20 Is=  FBuf 2+ C@ 20 Is=
 
 \ Header "Move", 0 ; ( src dst u -- ) copy u bytes from src to dst
-FBUF FBUF 3 MOVE IsEmpty
+FBUF FBUF 3 CMOVE IsEmpty
   FBuf C@ 20 Is=  FBuf 1+ C@ 20 Is=  FBuf 2+ C@ 20 Is=
-SBUF FBUF 0 MOVE IsEmpty
+SBUF FBUF 0 CMOVE IsEmpty
   FBuf C@ 20 Is=  FBuf 1+ C@ 20 Is=  FBuf 2+ C@ 20 Is=
-SBUF FBUF 1 MOVE IsEmpty
+SBUF FBUF 1 CMOVE IsEmpty
   FBuf C@ 12 Is=  FBuf 1+ C@ 20 Is=  FBuf 2+ C@ 20 Is=
-SBUF FBUF 3 MOVE IsEmpty
+SBUF FBUF 3 CMOVE IsEmpty
   FBuf C@ 12 Is=  FBuf 1+ C@ 34 Is=  FBuf 2+ C@ 56 Is=
-FBUF FBUF 1+ 2  MOVE IsEmpty
+FBUF FBUF 1+ 2  CMOVE IsEmpty
   FBuf C@ 12 Is=  FBuf 1+ C@ 12 Is=  FBuf 2+ C@ 34 Is=
-FBUF 1+ FBUF 2 MOVE IsEmpty
+FBUF 1+ FBUF 2 CMOVE IsEmpty
   FBuf C@ 12 Is=  FBuf 1+ C@ 34 Is=  FBuf 2+ C@ 34 Is=
 
 \ Header "Key", 0 ; ( -- char ) receive character (blocking)
@@ -493,7 +493,7 @@ Here  5 Allot  Here 5 + Is= IsEmpty
 
 \ Header ",",0 ; ( val -- ) compile cell into dictionary
 Here  4321 ,  Here - -2 Is= IsEmpty
-Here 2- @ 4321 Is= IsEmpty
+Here 2 - @ 4321 Is= IsEmpty
 
 \ Header "C,",0 ; ( byte -- ) compile byte into dictionary
 Here 56 C, Here - -1 Is= IsEmpty
@@ -513,10 +513,10 @@ LitTest 6789 Is= IsEmpty
 
 \ Header "Header,",0 ; ( addr len -- )  Compile a word header
 \ Header "Name>String",0 ; ( nt -- c-addr u )  Given a name token, return name as a string
-' Dup Name>String Type
+' Dup Name>String Type IsEmpty
 
 \ Header "Words",0 ; ( -- )  Walk dictionary and print names
-Words
+Words IsEmpty
 
 \ Header "Search-WordList",0 ; ( caddr u wid -- 0 | xt 1 | xt -1)  "Search for a word in a wordlist"
 \ Header "'",0 ; ( "name" -- xt )  find a word
@@ -524,6 +524,9 @@ Words
 \ Header "Variable",0 ; ( "name" -- )  Define a variable word
 \ Header "Create",0 ; ( "name" -- )  Create a word that pushes the addr of it's parameter field
 \ Header "Does>", F_Immediate ;
+: abc Create , Does> @ ;  IsEmpty
+4321 abc def  IsEmpty
+def 4321 Is= IsEmpty
 
 \ Header '."',F_Immediate ; ( string" -- )  Type a string literal
 ." Testing1"
