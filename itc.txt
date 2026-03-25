@@ -472,7 +472,7 @@ Max9:	inx
 Min:	.word *+2	; CFA
 	lda 0,x		; a
 	sec
-	sbc 0,x		; a - b (signed)
+	sbc 2,x		; a - b (signed)
 	bvs Max5
 Min5:	bmi Max8
 	bra Max9
@@ -746,7 +746,7 @@ ZeroGt:	.word *+2	; CFA
   ; https://forth-standard.org/standard/core/Equal
 Equal:	.word *+2	; CFA
 	LDA 0,X
-	CMP 0,X
+	CMP 2,X
 	BEQ True2
 False2:	INX		; Drop
 	INX
@@ -757,7 +757,7 @@ False2:	INX		; Drop
   ; https://forth-standard.org/standard/core/ne
 NotEqual: .word *+2	; CFA
 	LDA 0,X
-	CMP 0,X
+	CMP 2,X
 	beq False2
 True2:	inx		; Drop
 	inx
@@ -778,11 +778,12 @@ Less3:	bmi True2	; result negative and no overflow = a<b
  Header ">",0 ; ( a b -- flag ) signed
   ; https://forth-standard.org/standard/core/more
 Greater: .word *+2	; CFA
-	LDA 0,X		; b
+	LDA 2,X		; b
 	SEC
-	SBC 2,X		; b - a (reversed for >)
+	SBC 0,X		; b - a (reversed for >)
 	bvs Less3
-Greater3: bmi True2
+Greater3: bmi False2
+	bne True2
 	bra False2
 
 
@@ -916,7 +917,7 @@ TwoStore: .word *+2	; CFA
 	ldy 0,x		; addr
 	lda 2,x		; hi cell
 	sta a:0,y
-	lda 0,x		; lo cell
+	lda 4,x		; lo cell
 	sta a:2,y
 	ply		; restore IP
 	jmp ThreeDrop+2	; 3Drop addr d, NEXT
@@ -1482,37 +1483,26 @@ PlusLoop: .word DoCol
 	.word Exit
 
 
-; ( n -- ) (R: limit index -- | limit index+n)
+; ( n -- ) (R: limit index -- | limit index+n)  runtime for +LOOP
 @Run:	.word *+2	; CFA
-	lda 1,s		; index
-	CLC
-	ADC 0,x		; index + step
+	lda 0,x		; pop n
+	inx
+	inx
+	sta W		; save a copy
+	clc		; add to index
+	adc 1,s
 	sta 1,s
-	; Check if we crossed limit
-	; Positive step: done when index >= limit
-	; Negative step: done when index <= limit
-	; Simpler check: done when (index-limit) XOR (new_index-limit) sign differs
-
-	sec
-	lda 0,x
-	bmi @Neg
-	lda 1,s		; A= index-limit
+	sec		; compare to limit
 	sbc 3,s
-@cmp:	bvc @cmp3
-	eor #$ffff	; correct sign
-@cmp3:	bpl @done
-
+	cmp W		; compare with n
+	ror a
+	eor W
+	bpl @Done
 	lda a:0,y	; Branch back
 	tay
-@9:	inx		; Drop step
-	inx
-	NEXT
+@9:	NEXT
 
-@Neg:	lda 3,s		; A= limit-index
-	sbc 1,s
-	bra @cmp
-
-@done:	pla		; RDrop index
+@Done:	pla		; RDrop index
 	pla		; RDrop limit
 	iny		; skip branch addr
 	iny

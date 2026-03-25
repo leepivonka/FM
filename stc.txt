@@ -426,7 +426,7 @@ Max9:	inx
   ; https://forth-standard.org/standard/core/MIN
 Min:	lda 0,x		; a
 	sec
-	sbc 0,x		; a - b (signed)
+	sbc 2,x		; a - b (signed)
 	bvs Max5
 Min5:	bmi Max8
 	bra Max9
@@ -676,7 +676,7 @@ ZeroGt:
  Header "=", 0 ; ( a b -- flag )
   ; https://forth-standard.org/standard/core/Equal
 Equal:	LDA 0,X
-	CMP 0,X
+	CMP 2,X
 	BEQ True2
 False2:	INX		; Drop
 	INX
@@ -688,7 +688,7 @@ False2:	INX		; Drop
   ; https://forth-standard.org/standard/core/ne
 NotEqual:
 	LDA 0,X
-	CMP 0,X
+	CMP 2,X
 	beq False2
 True2:	inx		; Drop
 	inx
@@ -708,11 +708,12 @@ Less3:	bmi True2	; result negative and no overflow = a<b
  Header ">",0 ; ( a b -- flag ) signed
   ; https://forth-standard.org/standard/core/more
 Greater:
-	LDA 0,X		; b
+	LDA 2,X		; a
 	SEC
-	SBC 2,X		; b - a (reversed for >)
+	SBC 0,X		; b
 	bvs Less3
-Greater3: bmi True2
+Greater3: bmi False2
+	bne True2
 	bra False2
 
 
@@ -752,7 +753,6 @@ False:	lda #0
   ; Modified name to not conflict with opcode name.
 And1:	LDA 0,X
 	AND 2,X
-	STA 2,X
 	jmp NipA
 
 
@@ -837,7 +837,7 @@ TwoStore:
 	ldy 0,x		; addr
 	lda 2,x		; hi cell
 	sta a:0,y
-	lda 0,x		; lo cell
+	lda 4,x		; lo cell
 	sta a:2,y
 	jmp ThreeDrop	; 3Drop addr d
 
@@ -1307,6 +1307,7 @@ Do:	lda #@Run
 
 
  Header "Loop",F_Immediate ; ( back-addr -- )  Compile LOOP
+  ; https://forth-standard.org/standard/core/LOOP
 Loop:	lda #@Run	; compile jsr DoLoop
 	jsr CompileCommaA
 	jmp JmpComma	; compile jmp back
@@ -1332,38 +1333,28 @@ DoLoopDone:
 
 
  Header "+Loop",F_Immediate ; ( back-addr -- )  Compile +Loop
+  ; https://forth-standard.org/standard/core/PlusLOOP
 PlusLoop:
 	lda #@Run	; compile jsr @Run
 	jsr CompileCommaA
 	jmp JmpComma	; compile jmp back
 
 
-; (R: limit index -- | limit index+n)  runtime for +LOOP
-@Run:	lda 0,x		; pop step
+@Run: ; (R: limit index -- | limit index+n)  runtime for +LOOP
+	lda 0,x		; pop n
 	inx
 	inx
-	tay		; save a copy for later
-	clc
-	adc 3,s		; add step
+	sta W		; save a copy
+	clc		; add to index
+	adc 3,s
 	sta 3,s
-
-	; Check if we crossed limit
-	; Positive step: done when index >= limit
-	; Negative step: done when index <= limit
-	; Simpler check: done when (index-limit) XOR (new_index-limit) sign differs
-	sec
-	tya		; get step again
-	bmi @Neg
-	lda 3,s		; A= index-limit
+	sec		; compare to limit
 	sbc 5,s
-@cmp:	bvc @cmp3
-	eor #$ffff	; correct sign
-@cmp3:	bpl DoLoopDone
+	cmp W		; compare with n
+	ror a
+	eor W
+	bpl DoLoopDone
 	rts		; fall into jmp back
-
-@Neg:	lda 5,s		; A= limit-index
-	sbc 3,s
-	bra @cmp
 
 
  Header "Unloop",F_Immediate ; ( -- ) (R: limit index -- ) discard DO loop parameters

@@ -272,20 +272,20 @@ Current file: stc.txt
 00600D  1  A9 97 04     	LDA #RSP_INIT
 006010  1  1B           	TAS		; Hardware (return) stack pointer
 006011  1               
-006011  1  20 53 6A     	jsr Decimal
+006011  1  20 49 6A     	jsr Decimal
 006014  1               
 006014  1  64 02        	stz U_State	; User area: STATE = 0
 006016  1               
 006016  1  A9 98 04     	lda #Dict_Base	; User area: DP = Dict_Base
 006019  1  85 04        	sta U_DP
 00601B  1               
-00601B  1  A9 9A 6C     	lda #Last_ROM_Word ; User area: LATEST = last ROM word
+00601B  1  A9 90 6C     	lda #Last_ROM_Word ; User area: LATEST = last ROM word
 00601E  1  85 06        	sta U_Latest
 006020  1               
 006020  1               ;	lda #'R'	;???debug
 006020  1               ;	jsr EmitA
 006020  1               
-006020  1  4C 95 6B     	jmp Quit	; Jump to QUIT (outer interpreter)
+006020  1  4C 8B 6B     	jmp Quit	; Jump to QUIT (outer interpreter)
 006023  1               
 006023  1               
 006023  1               ;==============================================================================
@@ -570,7 +570,7 @@ Current file: stc.txt
 00619F  1                 ; https://forth-standard.org/standard/core/MIN
 00619F  1  B5 00        Min:	lda 0,x		; a
 0061A1  1  38           	sec
-0061A2  1  F5 00        	sbc 0,x		; a - b (signed)
+0061A2  1  F5 02        	sbc 2,x		; a - b (signed)
 0061A4  1  70 EA        	bvs Max5
 0061A6  1  30 EA        Min5:	bmi Max8
 0061A8  1  80 EC        	bra Max9
@@ -842,7 +842,7 @@ Current file: stc.txt
 00630C  1  3D 01 04 63   Header "=", 0 ; ( a b -- flag )
 006310  1                 ; https://forth-standard.org/standard/core/Equal
 006310  1  B5 00        Equal:	LDA 0,X
-006312  1  D5 00        	CMP 0,X
+006312  1  D5 02        	CMP 2,X
 006314  1  F0 10        	BEQ True2
 006316  1  E8           False2:	INX		; Drop
 006317  1  E8           	INX
@@ -855,7 +855,7 @@ Current file: stc.txt
 006320  1                 ; https://forth-standard.org/standard/core/ne
 006320  1               NotEqual:
 006320  1  B5 00        	LDA 0,X
-006322  1  D5 00        	CMP 0,X
+006322  1  D5 02        	CMP 2,X
 006324  1  F0 F0        	beq False2
 006326  1  E8           True2:	inx		; Drop
 006327  1  E8           	inx
@@ -875,60 +875,60 @@ Current file: stc.txt
 006339  1  3E 01 2E 63   Header ">",0 ; ( a b -- flag ) signed
 00633D  1                 ; https://forth-standard.org/standard/core/more
 00633D  1               Greater:
-00633D  1  B5 00        	LDA 0,X		; b
+00633D  1  B5 02        	LDA 2,X		; a
 00633F  1  38           	SEC
-006340  1  F5 02        	SBC 2,X		; b - a (reversed for >)
+006340  1  F5 00        	SBC 0,X		; b
 006342  1  70 F1        	bvs Less3
-006344  1  30 E0        Greater3: bmi True2
-006346  1  80 CE        	bra False2
-006348  1               
-006348  1               
-006348  1  55 3C 02 3D   Header "U<",0 ; ( u1 u2 -- flag ) unsigned less than
-00634C  1  63           
-00634D  1                 ; https://forth-standard.org/standard/core/Uless
-00634D  1  B5 02        ULess:	LDA 2,X		; u1
-00634F  1  D5 00        	CMP 0,X		; u1 - u2 (unsigned)
-006351  1  90 D3        	BCC True2	; Carry clear = u1 < u2
-006353  1  80 C1        	bra False2
-006355  1               
-006355  1               
-006355  1  55 3E 02 4D   Header "U>",0 ; ( u1 u2 -- flag ) unsigned greater than
-006359  1  63           
-00635A  1                 ; https://forth-standard.org/standard/core/Umore
-00635A  1               UGreater:
-00635A  1  B5 00        	LDA 0,X		; u2
-00635C  1  D5 02        	CMP 2,X		; u2 - u1 (reversed)
-00635E  1  90 C6        	BCC True2
-006360  1  80 B4        	bra False2
-006362  1               
-006362  1               ;==============================================================================
-006362  1               ; SECTION 5: LOGIC
-006362  1               
-006362  1  54 72 75 65   Header "True",0 ; ( -- true )
-006366  1  04 5A 63     
-006369  1                 ; https://forth-standard.org/standard/core/TRUE
-006369  1  A9 FF FF     True:	lda #$ffff
-00636C  1  4C 3B 60     	jmp PushA
-00636F  1               
-00636F  1               
-00636F  1  46 61 6C 73   Header "False",0 ; ( -- false )
-006373  1  65 05 69 63  
-006377  1                 ; https://forth-standard.org/standard/core/FALSE
-006377  1  A9 00 00     False:	lda #0
-00637A  1  4C 3B 60     	jmp PushA
-00637D  1               
-00637D  1               
-00637D  1  41 6E 64 03   Header "And",0 ; ( a b -- a&b )
-006381  1  77 63        
-006383  1                 ; https://forth-standard.org/standard/core/AND
-006383  1                 ; Modified name to not conflict with opcode name.
-006383  1  B5 00        And1:	LDA 0,X
-006385  1  35 02        	AND 2,X
-006387  1  95 02        	STA 2,X
+006344  1  30 D0        Greater3: bmi False2
+006346  1  D0 DE        	bne True2
+006348  1  80 CC        	bra False2
+00634A  1               
+00634A  1               
+00634A  1  55 3C 02 3D   Header "U<",0 ; ( u1 u2 -- flag ) unsigned less than
+00634E  1  63           
+00634F  1                 ; https://forth-standard.org/standard/core/Uless
+00634F  1  B5 02        ULess:	LDA 2,X		; u1
+006351  1  D5 00        	CMP 0,X		; u1 - u2 (unsigned)
+006353  1  90 D1        	BCC True2	; Carry clear = u1 < u2
+006355  1  80 BF        	bra False2
+006357  1               
+006357  1               
+006357  1  55 3E 02 4F   Header "U>",0 ; ( u1 u2 -- flag ) unsigned greater than
+00635B  1  63           
+00635C  1                 ; https://forth-standard.org/standard/core/Umore
+00635C  1               UGreater:
+00635C  1  B5 00        	LDA 0,X		; u2
+00635E  1  D5 02        	CMP 2,X		; u2 - u1 (reversed)
+006360  1  90 C4        	BCC True2
+006362  1  80 B2        	bra False2
+006364  1               
+006364  1               ;==============================================================================
+006364  1               ; SECTION 5: LOGIC
+006364  1               
+006364  1  54 72 75 65   Header "True",0 ; ( -- true )
+006368  1  04 5C 63     
+00636B  1                 ; https://forth-standard.org/standard/core/TRUE
+00636B  1  A9 FF FF     True:	lda #$ffff
+00636E  1  4C 3B 60     	jmp PushA
+006371  1               
+006371  1               
+006371  1  46 61 6C 73   Header "False",0 ; ( -- false )
+006375  1  65 05 6B 63  
+006379  1                 ; https://forth-standard.org/standard/core/FALSE
+006379  1  A9 00 00     False:	lda #0
+00637C  1  4C 3B 60     	jmp PushA
+00637F  1               
+00637F  1               
+00637F  1  41 6E 64 03   Header "And",0 ; ( a b -- a&b )
+006383  1  79 63        
+006385  1                 ; https://forth-standard.org/standard/core/AND
+006385  1                 ; Modified name to not conflict with opcode name.
+006385  1  B5 00        And1:	LDA 0,X
+006387  1  35 02        	AND 2,X
 006389  1  4C 80 60     	jmp NipA
 00638C  1               
 00638C  1               
-00638C  1  4F 72 02 83   Header "Or",0 ; ( a b -- a|b )
+00638C  1  4F 72 02 85   Header "Or",0 ; ( a b -- a|b )
 006390  1  63           
 006391  1                 ; https://forth-standard.org/standard/core/OR
 006391  1                 ; Modified name to not conflict with opcode name.
@@ -1017,7 +1017,7 @@ Current file: stc.txt
 006402  1  B4 00        	ldy 0,x		; addr
 006404  1  B5 02        	lda 2,x		; hi cell
 006406  1  99 00 00     	sta a:0,y
-006409  1  B5 00        	lda 0,x		; lo cell
+006409  1  B5 04        	lda 4,x		; lo cell
 00640B  1  99 02 00     	sta a:2,y
 00640E  1  4C 9D 60     	jmp ThreeDrop	; 3Drop addr d
 006411  1               
@@ -1384,7 +1384,7 @@ Current file: stc.txt
 0065E1  1  84 D6 65     
 0065E4  1                 ; https://forth-standard.org/standard/core/EXIT
 0065E4  1  A9 60 00     Exit:	lda #$60	; rts
-0065E7  1  4C 4A 67     	jmp CCommaA
+0065E7  1  4C 40 67     	jmp CCommaA
 0065EA  1               
 0065EA  1               
 0065EA  1               ;----------------------------------------------
@@ -1394,9 +1394,9 @@ Current file: stc.txt
 0065EA  1  49 66 82 E4   Header "If",F_Immediate ; ( -- patch_addr )  Compile an If
 0065EE  1  65           
 0065EF  1  A9 FB 65     If:	lda #DoIf		; compile jsr DoIf
-0065F2  1  20 5D 67     	jsr CompileCommaA
-0065F5  1  20 16 67     	jsr Here		; remember addr patch location
-0065F8  1  4C 72 67     	jmp JmpCommaA		; compile jmp abs
+0065F2  1  20 53 67     	jsr CompileCommaA
+0065F5  1  20 0C 67     	jsr Here		; remember addr patch location
+0065F8  1  4C 68 67     	jmp JmpCommaA		; compile jmp abs
 0065FB  1               
 0065FB  1               DoIf: ; ( f -- )  "If" runtime
 0065FB  1  B5 00        	lda 0,x		; pop f
@@ -1425,8 +1425,8 @@ Current file: stc.txt
 00660D  1               
 00660D  1  45 6C 73 65   Header "Else",F_Immediate ; ( patch_addr -- patch2_addr ) Compile "Else"
 006611  1  84 EF 65     
-006614  1  20 16 67     Else:	jsr Here	; remember patch2 addr
-006617  1  20 72 67     	jsr JmpCommaA	; compile jmp abs
+006614  1  20 0C 67     Else:	jsr Here	; remember patch2 addr
+006617  1  20 68 67     	jsr JmpCommaA	; compile jmp abs
 00661A  1  20 51 60     	jsr Swap
 00661D  1  80 07        	bra Then	; update jmp
 00661F  1               
@@ -1450,20 +1450,20 @@ Current file: stc.txt
 006630  1  42 65 67 69   Header "Begin",F_Immediate ; ( -- rev_addr )  Compile "Begin"
 006634  1  6E 85 26 66  
 006638  1                 ; https://forth-standard.org/standard/core/BEGIN
-006638  1  4C 16 67     Begin:	jmp Here	; remember rev_addr
+006638  1  4C 0C 67     Begin:	jmp Here	; remember rev_addr
 00663B  1               
 00663B  1               
 00663B  1  41 67 61 69   Header "Again",F_Immediate ; ( rev_addr -- )  Compile "Again"
 00663F  1  6E 85 38 66  
 006643  1                 ; https://forth-standard.org/standard/core/AGAIN
-006643  1  4C 6E 67     Again:	jmp JmpComma	; compile jmp rev_addr
+006643  1  4C 64 67     Again:	jmp JmpComma	; compile jmp rev_addr
 006646  1               
 006646  1               
 006646  1  55 6E 74 69   Header "Until",F_Immediate ; ( rev_addr -- )  Compile "Until"
 00664A  1  6C 85 43 66  
 00664E  1                 ; http://forth-standard.org/standard/core/UNTIL
 00664E  1  A9 FB 65     Until:	lda #DoIf	; compile jsr DoIf
-006651  1  20 5D 67     	jsr CompileCommaA
+006651  1  20 53 67     	jsr CompileCommaA
 006654  1  80 ED        	bra Again	; compile jmp rev_addr
 006656  1               
 006656  1               
@@ -1471,9 +1471,9 @@ Current file: stc.txt
 00665A  1  65 85 4E 66  
 00665E  1                 ; http://forth-standard.org/standard/core/WHILE
 00665E  1  A9 FB 65     While:	lda #DoIf	; compile jsr @Run
-006661  1  20 5D 67     	jsr CompileCommaA
-006664  1  20 16 67     	jsr Here	; remember fwd_addr
-006667  1  4C 72 67     	jmp JmpCommaA	; compile jmp abs
+006661  1  20 53 67     	jsr CompileCommaA
+006664  1  20 0C 67     	jsr Here	; remember fwd_addr
+006667  1  4C 68 67     	jmp JmpCommaA	; compile jmp abs
 00666A  1               
 00666A  1               
 00666A  1  52 65 70 65   Header "Repeat",F_Immediate ; ( rev_addr fwd_addr -- )  Compile "Repeat"
@@ -1481,7 +1481,7 @@ Current file: stc.txt
 006672  1  66           
 006673  1                 ; http://forth-standard.org/standard/core/REPEAT
 006673  1  B5 02        Repeat:	lda 2,x		; compile jmp rev
-006675  1  20 72 67     	jsr JmpCommaA
+006675  1  20 68 67     	jsr JmpCommaA
 006678  1  B4 00        	ldy 0,x		; patch jmp fwd
 00667A  1  A5 04        	lda U_DP
 00667C  1  99 01 00     	sta a:1,y
@@ -1500,8 +1500,8 @@ Current file: stc.txt
 006686  1  66           
 006687  1                 ; https://forth-standard.org/standard/core/DO
 006687  1  A9 90 66     Do:	lda #@Run
-00668A  1  20 5D 67     	jsr CompileCommaA
-00668D  1  4C 16 67     	jmp Here	; remember back_addr
+00668A  1  20 53 67     	jsr CompileCommaA
+00668D  1  4C 0C 67     	jmp Here	; remember back_addr
 006690  1               
 006690  1               
 006690  1               @Run: ; ( limit index -- ) (R: -- limit index) runtime for DO
@@ -1516,9 +1516,10 @@ Current file: stc.txt
 00669B  1               
 00669B  1  4C 6F 6F 70   Header "Loop",F_Immediate ; ( back-addr -- )  Compile LOOP
 00669F  1  84 87 66     
+0066A2  1                 ; https://forth-standard.org/standard/core/LOOP
 0066A2  1  A9 AB 66     Loop:	lda #@Run	; compile jsr DoLoop
-0066A5  1  20 5D 67     	jsr CompileCommaA
-0066A8  1  4C 6E 67     	jmp JmpComma	; compile jmp back
+0066A5  1  20 53 67     	jsr CompileCommaA
+0066A8  1  4C 64 67     	jmp JmpComma	; compile jmp back
 0066AB  1               
 0066AB  1               
 0066AB  1               @Run: ; ( -- ) (R: limit index -- | limit index+1)  runtime for LOOP
@@ -1542,1000 +1543,990 @@ Current file: stc.txt
 0066BD  1               
 0066BD  1  2B 4C 6F 6F   Header "+Loop",F_Immediate ; ( back-addr -- )  Compile +Loop
 0066C1  1  70 85 A2 66  
+0066C5  1                 ; https://forth-standard.org/standard/core/PlusLOOP
 0066C5  1               PlusLoop:
 0066C5  1  A9 CE 66     	lda #@Run	; compile jsr @Run
-0066C8  1  20 5D 67     	jsr CompileCommaA
-0066CB  1  4C 6E 67     	jmp JmpComma	; compile jmp back
+0066C8  1  20 53 67     	jsr CompileCommaA
+0066CB  1  4C 64 67     	jmp JmpComma	; compile jmp back
 0066CE  1               
 0066CE  1               
-0066CE  1               ; (R: limit index -- | limit index+n)  runtime for +LOOP
-0066CE  1  B5 00        @Run:	lda 0,x		; pop step
+0066CE  1               @Run: ; (R: limit index -- | limit index+n)  runtime for +LOOP
+0066CE  1  B5 00        	lda 0,x		; pop n
 0066D0  1  E8           	inx
 0066D1  1  E8           	inx
-0066D2  1  A8           	tay		; save a copy for later
-0066D3  1  18           	clc
-0066D4  1  63 03        	adc 3,s		; add step
-0066D6  1  83 03        	sta 3,s
-0066D8  1               
-0066D8  1               	; Check if we crossed limit
-0066D8  1               	; Positive step: done when index >= limit
-0066D8  1               	; Negative step: done when index <= limit
-0066D8  1               	; Simpler check: done when (index-limit) XOR (new_index-limit) sign differs
-0066D8  1  38           	sec
-0066D9  1  98           	tya		; get step again
-0066DA  1  30 0C        	bmi @Neg
-0066DC  1  A3 03        	lda 3,s		; A= index-limit
-0066DE  1  E3 05        	sbc 5,s
-0066E0  1  50 03        @cmp:	bvc @cmp3
-0066E2  1  49 FF FF     	eor #$ffff	; correct sign
-0066E5  1  10 CE        @cmp3:	bpl DoLoopDone
-0066E7  1  60           	rts		; fall into jmp back
-0066E8  1               
-0066E8  1  A3 05        @Neg:	lda 5,s		; A= limit-index
-0066EA  1  E3 03        	sbc 3,s
-0066EC  1  80 F2        	bra @cmp
-0066EE  1               
-0066EE  1               
-0066EE  1  55 6E 6C 6F   Header "Unloop",F_Immediate ; ( -- ) (R: limit index -- ) discard DO loop parameters
-0066F2  1  6F 70 86 C5  
-0066F6  1  66           
-0066F7  1                 ; https://forth-standard.org/standard/core/UNLOOP
-0066F7  1  A9 68 68     Unloop: lda #$6868	; pla; pla	; RDrop index; RDrop limit
-0066FA  1  4C 35 67     	jmp CommaA
-0066FD  1               
-0066FD  1               
-0066FD  1  49 01 F7 66   Header "I",0 ; ( -- n ) (R: limit index -- limit index) copy loop index
-006701  1                 ; https://forth-standard.org/standard/core/TwoRFetch
-006701  1  A3 03        I:	lda 3,s		; index
-006703  1  4C 3B 60     	jmp PushA
-006706  1               
-006706  1               
-006706  1  4A 01 01 67   Header "J",0 ; ( -- n ) ( R: 2limit 2index 1limit 1index ) copy 2nd loop index
-00670A  1                 ; https://forth-standard.org/standard/core/J
-00670A  1  A3 07        J:	lda 7,s		; 2nd index
-00670C  1  4C 3B 60     	jmp PushA
-00670F  1               
-00670F  1               ;==============================================================================
-00670F  1               ; SECTION 9: DICTIONARY
-00670F  1               
-00670F  1               
-00670F  1               ;  Header "Unused",0 ; ( -- u )  return the space remaining in the region addressed by HERE
-00670F  1                 ; https://forth-standard.org/standard/core/UNUSED
-00670F  1               
-00670F  1               
-00670F  1  48 65 72 65   Header "Here",0 ; ( -- addr ) current dictionary pointer
-006713  1  04 0A 67     
-006716  1                 ; https://forth-standard.org/standard/core/HERE
-006716  1  A5 04        Here:	lda U_DP
-006718  1  4C 3B 60     	jmp PushA
-00671B  1               
-00671B  1               
-00671B  1               ; Header "Pad",0 ; ( -- c-addr )  Return transient region
-00671B  1                 ; https://forth-standard.org/standard/core/PAD
-00671B  1               
-00671B  1               
-00671B  1  41 6C 6C 6F   Header "Allot",0 ; ( n -- ) advance dictionary pointer by n bytes
-00671F  1  74 05 16 67  
-006723  1                 ; https://forth-standard.org/standard/core/ALLOT
-006723  1  B5 00        Allot:	lda 0,x		; pop n
-006725  1  E8           	inx
-006726  1  E8           	inx
-006727  1  18           AllotA:	clc
-006728  1  65 04        	adc U_DP	; DP += n
-00672A  1  85 04        	sta U_DP
-00672C  1  60           	rts
-00672D  1               
-00672D  1               
-00672D  1  2C 01 23 67   Header ",",0 ; ( val -- ) compile cell into dictionary
-006731  1                 ; https://forth-standard.org/standard/core/Comma
-006731  1  B5 00        Comma:	lda 0,x		; pop val
-006733  1  E8           	inx
-006734  1  E8           	inx
-006735  1               CommaA: ; A=val to compile
-006735  1  92 04        	sta (U_DP)	; store val
-006737  1  E6 04        	inc U_DP	; update DP
-006739  1  E6 04        Comma3:	inc U_DP
-00673B  1  A9 00 00     	lda #0		; help debugging
-00673E  1  92 04        	sta (U_DP)
-006740  1  60           	rts
-006741  1               
-006741  1               
-006741  1  43 2C 02 31   Header "C,",0 ; ( byte -- ) compile byte into dictionary
-006745  1  67           
-006746  1                 ; https://forth-standard.org/standard/core/CComma
-006746  1  B5 00        CComma:	lda 0,x		; pop byte
-006748  1  E8           	inx
-006749  1  E8           	inx
-00674A  1               CCommaA: ; A=val to compile
-00674A  1  92 04        	sta (U_DP)	; save val
-00674C  1  80 EB        	bra Comma3
-00674E  1               
-00674E  1               
-00674E  1  43 6F 6D 70   Header "Compile,",0 ; ( xt -- )  Compile a jsr abs
-006752  1  69 6C 65 2C  
-006756  1  08 46 67     
-006759  1                 ; https://forth-standard.org/standard/core/COMPILEComma
-006759  1               CompileComma:
-006759  1  B5 00        	lda 0,x		; pop xt
-00675B  1  E8           	inx
-00675C  1  E8           	inx
-00675D  1               CompileCommaA:
-00675D  1  48           	pha
-00675E  1  A9 20 00     	lda #$20	; jsr abs
-006761  1               CompileComma3:
-006761  1  20 4A 67     	jsr CCommaA
-006764  1  68           	pla
-006765  1  80 CE        	bra CommaA
-006767  1               
-006767  1               
-006767  1  4A 6D 70 2C   Header "Jmp,",0 ; ( xt -- )  compile a jmp abs
-00676B  1  04 59 67     
-00676E  1  B5 00        JmpComma: lda 0,x	; pop xt
-006770  1  E8           	inx
-006771  1  E8           	inx
-006772  1               JmpCommaA:
-006772  1  48           	pha
-006773  1  A9 4C 00     	lda #$4c	; jmp abs
-006776  1  80 E9        	bra CompileComma3
-006778  1               
-006778  1               
-006778  1  4C 64 61 23   Header "Lda#,",0 ; ( n -- )  compile lda #
-00677C  1  2C 05 6E 67  
-006780  1               LdaIComma:
-006780  1  A9 A9 00      	lda #$a9		; lda #
-006783  1  20 4A 67     	jsr CCommaA
-006786  1  80 A9        	bra Comma
-006788  1               
-006788  1               
-006788  1  4C 69 74 65   Header "Literal",F_Immediate ; ( n -- )  Compile inline constant
-00678C  1  72 61 6C 87  
-006790  1  80 67        
-006792  1               Literal:
-006792  1  20 80 67     	jsr LdaIComma		; compile lda #
-006795  1  A9 3B 60     	lda #PushA		; compile jsr PushA
-006798  1  80 C3        	bra CompileCommaA
-00679A  1               
-00679A  1               
-00679A  1               ; Header "String,",0  ; ( caddr len -- ) compile a string
-00679A  1               StringComma:
-00679A  1  B5 00        	lda 0,x
-00679C  1  20 35 67     	jsr CommaA	; compile length
-00679F  1  20 16 67     	jsr Here
-0067A2  1  20 51 60     	jsr Swap
-0067A5  1  B5 00        	lda 0,x
-0067A7  1  20 27 67     	jsr AllotA
-0067AA  1  4C 19 64     	jmp CMove	; compile chars
-0067AD  1               
-0067AD  1               
-0067AD  1  48 65 61 64   Header "Header,",0 ; ( addr len -- )  Compile a word header
-0067B1  1  65 72 2C 07  
-0067B5  1  92 67        
-0067B7  1               HeaderComma:
-0067B7  1  B4 00        	ldy 0,x		; compile name string
-0067B9  1  5A           @name1:	phy
-0067BA  1  A1 02        	lda (2,x)
-0067BC  1  F6 02        	inc 2,x
-0067BE  1  20 4A 67     	jsr CCommaA
-0067C1  1  7A           	ply
-0067C2  1  88           	dey
-0067C3  1  D0 F4        	bne @name1
+0066D2  1  85 0E        	sta W		; save a copy
+0066D4  1  18           	clc		; add to index
+0066D5  1  63 03        	adc 3,s
+0066D7  1  83 03        	sta 3,s
+0066D9  1  38           	sec		; compare to limit
+0066DA  1  E3 05        	sbc 5,s
+0066DC  1  C5 0E        	cmp W		; compare with n
+0066DE  1  6A           	ror a
+0066DF  1  45 0E        	eor W
+0066E1  1  10 D2        	bpl DoLoopDone
+0066E3  1  60           	rts		; fall into jmp back
+0066E4  1               
+0066E4  1               
+0066E4  1  55 6E 6C 6F   Header "Unloop",F_Immediate ; ( -- ) (R: limit index -- ) discard DO loop parameters
+0066E8  1  6F 70 86 C5  
+0066EC  1  66           
+0066ED  1                 ; https://forth-standard.org/standard/core/UNLOOP
+0066ED  1  A9 68 68     Unloop: lda #$6868	; pla; pla	; RDrop index; RDrop limit
+0066F0  1  4C 2B 67     	jmp CommaA
+0066F3  1               
+0066F3  1               
+0066F3  1  49 01 ED 66   Header "I",0 ; ( -- n ) (R: limit index -- limit index) copy loop index
+0066F7  1                 ; https://forth-standard.org/standard/core/TwoRFetch
+0066F7  1  A3 03        I:	lda 3,s		; index
+0066F9  1  4C 3B 60     	jmp PushA
+0066FC  1               
+0066FC  1               
+0066FC  1  4A 01 F7 66   Header "J",0 ; ( -- n ) ( R: 2limit 2index 1limit 1index ) copy 2nd loop index
+006700  1                 ; https://forth-standard.org/standard/core/J
+006700  1  A3 07        J:	lda 7,s		; 2nd index
+006702  1  4C 3B 60     	jmp PushA
+006705  1               
+006705  1               ;==============================================================================
+006705  1               ; SECTION 9: DICTIONARY
+006705  1               
+006705  1               
+006705  1               ;  Header "Unused",0 ; ( -- u )  return the space remaining in the region addressed by HERE
+006705  1                 ; https://forth-standard.org/standard/core/UNUSED
+006705  1               
+006705  1               
+006705  1  48 65 72 65   Header "Here",0 ; ( -- addr ) current dictionary pointer
+006709  1  04 00 67     
+00670C  1                 ; https://forth-standard.org/standard/core/HERE
+00670C  1  A5 04        Here:	lda U_DP
+00670E  1  4C 3B 60     	jmp PushA
+006711  1               
+006711  1               
+006711  1               ; Header "Pad",0 ; ( -- c-addr )  Return transient region
+006711  1                 ; https://forth-standard.org/standard/core/PAD
+006711  1               
+006711  1               
+006711  1  41 6C 6C 6F   Header "Allot",0 ; ( n -- ) advance dictionary pointer by n bytes
+006715  1  74 05 0C 67  
+006719  1                 ; https://forth-standard.org/standard/core/ALLOT
+006719  1  B5 00        Allot:	lda 0,x		; pop n
+00671B  1  E8           	inx
+00671C  1  E8           	inx
+00671D  1  18           AllotA:	clc
+00671E  1  65 04        	adc U_DP	; DP += n
+006720  1  85 04        	sta U_DP
+006722  1  60           	rts
+006723  1               
+006723  1               
+006723  1  2C 01 19 67   Header ",",0 ; ( val -- ) compile cell into dictionary
+006727  1                 ; https://forth-standard.org/standard/core/Comma
+006727  1  B5 00        Comma:	lda 0,x		; pop val
+006729  1  E8           	inx
+00672A  1  E8           	inx
+00672B  1               CommaA: ; A=val to compile
+00672B  1  92 04        	sta (U_DP)	; store val
+00672D  1  E6 04        	inc U_DP	; update DP
+00672F  1  E6 04        Comma3:	inc U_DP
+006731  1  A9 00 00     	lda #0		; help debugging
+006734  1  92 04        	sta (U_DP)
+006736  1  60           	rts
+006737  1               
+006737  1               
+006737  1  43 2C 02 27   Header "C,",0 ; ( byte -- ) compile byte into dictionary
+00673B  1  67           
+00673C  1                 ; https://forth-standard.org/standard/core/CComma
+00673C  1  B5 00        CComma:	lda 0,x		; pop byte
+00673E  1  E8           	inx
+00673F  1  E8           	inx
+006740  1               CCommaA: ; A=val to compile
+006740  1  92 04        	sta (U_DP)	; save val
+006742  1  80 EB        	bra Comma3
+006744  1               
+006744  1               
+006744  1  43 6F 6D 70   Header "Compile,",0 ; ( xt -- )  Compile a jsr abs
+006748  1  69 6C 65 2C  
+00674C  1  08 3C 67     
+00674F  1                 ; https://forth-standard.org/standard/core/COMPILEComma
+00674F  1               CompileComma:
+00674F  1  B5 00        	lda 0,x		; pop xt
+006751  1  E8           	inx
+006752  1  E8           	inx
+006753  1               CompileCommaA:
+006753  1  48           	pha
+006754  1  A9 20 00     	lda #$20	; jsr abs
+006757  1               CompileComma3:
+006757  1  20 40 67     	jsr CCommaA
+00675A  1  68           	pla
+00675B  1  80 CE        	bra CommaA
+00675D  1               
+00675D  1               
+00675D  1  4A 6D 70 2C   Header "Jmp,",0 ; ( xt -- )  compile a jmp abs
+006761  1  04 4F 67     
+006764  1  B5 00        JmpComma: lda 0,x	; pop xt
+006766  1  E8           	inx
+006767  1  E8           	inx
+006768  1               JmpCommaA:
+006768  1  48           	pha
+006769  1  A9 4C 00     	lda #$4c	; jmp abs
+00676C  1  80 E9        	bra CompileComma3
+00676E  1               
+00676E  1               
+00676E  1  4C 64 61 23   Header "Lda#,",0 ; ( n -- )  compile lda #
+006772  1  2C 05 64 67  
+006776  1               LdaIComma:
+006776  1  A9 A9 00      	lda #$a9		; lda #
+006779  1  20 40 67     	jsr CCommaA
+00677C  1  80 A9        	bra Comma
+00677E  1               
+00677E  1               
+00677E  1  4C 69 74 65   Header "Literal",F_Immediate ; ( n -- )  Compile inline constant
+006782  1  72 61 6C 87  
+006786  1  76 67        
+006788  1               Literal:
+006788  1  20 76 67     	jsr LdaIComma		; compile lda #
+00678B  1  A9 3B 60     	lda #PushA		; compile jsr PushA
+00678E  1  80 C3        	bra CompileCommaA
+006790  1               
+006790  1               
+006790  1               ; Header "String,",0  ; ( caddr len -- ) compile a string
+006790  1               StringComma:
+006790  1  B5 00        	lda 0,x
+006792  1  20 2B 67     	jsr CommaA	; compile length
+006795  1  20 0C 67     	jsr Here
+006798  1  20 51 60     	jsr Swap
+00679B  1  B5 00        	lda 0,x
+00679D  1  20 1D 67     	jsr AllotA
+0067A0  1  4C 19 64     	jmp CMove	; compile chars
+0067A3  1               
+0067A3  1               
+0067A3  1  48 65 61 64   Header "Header,",0 ; ( addr len -- )  Compile a word header
+0067A7  1  65 72 2C 07  
+0067AB  1  88 67        
+0067AD  1               HeaderComma:
+0067AD  1  B4 00        	ldy 0,x		; compile name string
+0067AF  1  5A           @name1:	phy
+0067B0  1  A1 02        	lda (2,x)
+0067B2  1  F6 02        	inc 2,x
+0067B4  1  20 40 67     	jsr CCommaA
+0067B7  1  7A           	ply
+0067B8  1  88           	dey
+0067B9  1  D0 F4        	bne @name1
+0067BB  1               
+0067BB  1  B5 00        	lda 0,x		; compile flags & length byte
+0067BD  1  20 40 67     	jsr CCommaA
+0067C0  1               
+0067C0  1  A5 06        	lda U_Latest	; compile dictionary link
+0067C2  1  20 2B 67     	jsr CommaA
 0067C5  1               
-0067C5  1  B5 00        	lda 0,x		; compile flags & length byte
-0067C7  1  20 4A 67     	jsr CCommaA
-0067CA  1               
-0067CA  1  A5 06        	lda U_Latest	; compile dictionary link
-0067CC  1  20 35 67     	jsr CommaA
-0067CF  1               
-0067CF  1  A5 04        	lda U_DP	; link into dictionary chain
-0067D1  1  85 06        	sta U_Latest
-0067D3  1               
-0067D3  1  4C 99 60     	jmp TwoDrop	; drop len addr
-0067D6  1               
-0067D6  1               
-0067D6  1  4E 61 6D 65   Header "Name>String",0 ; ( nt -- c-addr u )  Given a name token, return name as a string
-0067DA  1  3E 53 74 72  
-0067DE  1  69 6E 67 0B  
-0067E2  1  B7 67        
-0067E4  1                 ; https://forth-standard.org/standard/tools/NAMEtoSTRING
-0067E4  1               NameToString:
-0067E4  1  B4 00        	ldy 0,x		; Y= nt
-0067E6  1  88           	dey
-0067E7  1  88           	dey
-0067E8  1  88           	dey
-0067E9  1  B9 00 00     	lda a:0,y	; get flags & length
-0067EC  1  29 1F 00     	and #F_LengthMask
-0067EF  1  48           	pha		; save length
-0067F0  1  98           	tya		; calc name start addr
-0067F1  1  38           	sec
-0067F2  1  E3 01        	sbc 1,s
-0067F4  1  95 00        	sta 0,x		; save c-addr
-0067F6  1  68           	pla		; get length back
-0067F7  1  4C 3B 60     	jmp PushA
-0067FA  1               
-0067FA  1               
-0067FA  1  57 6F 72 64   Header "Words",0 ; ( -- )  Walk dictionary and print names
-0067FE  1  73 05 E4 67  
-006802  1                ; https://forth-standard.org/standard/tools/WORDS
-006802  1  A5 06        Words:	lda U_Latest		; for each word
-006804  1  F0 17        @wloop:	beq @wdone
-006806  1  48           	pha
-006807  1               
-006807  1  20 C1 64     	jsr Space
-00680A  1  A3 01        	lda 1,s
-00680C  1  20 3B 60     	jsr PushA		;   print name
-00680F  1  20 E4 67     	jsr NameToString
-006812  1  20 E2 64     	jsr Type
-006815  1               
-006815  1  7A           	ply
-006816  1  88           	dey
-006817  1  88           	dey
-006818  1  B9 00 00     	lda a:0,y		;  next
-00681B  1  80 E7        	bra @wloop
-00681D  1               
-00681D  1               @wdone:
-00681D  1  4C AE 64     	jmp CR
-006820  1               
-006820  1               
-006820  1  53 65 61 72   Header "Search-WordList",0 ; ( caddr u wid -- 0 | xt 1 | xt -1)  "Search for a word in a wordlist"
-006824  1  63 68 2D 57  
-006828  1  6F 72 64 4C  
-00682C  1  69 73 74 0F  
-006830  1  02 68        
-006832  1                 ; https://forth-standard.org/standard/search/SEARCH_WORDLIST
-006832  1                 ; Find the definition named in the string.
-006832  1                 ; If the definition is not found, return zero.
-006832  1                 ; If the definition is found, return its execution token xt.
-006832  1                 ; If the definition is immediate, also return one (1), otherwise also return minus-one (-1).
-006832  1               Search_WordList:
-006832  1               @HdrPtr	= Temp0  ; ptr to current word Header (-@Off)
-006832  1               @Quick	= Temp2  ; pattern last char & length
-006832  1               @StartY = Temp4  ; char compare start offset
-006832  1               @PatPtr = Temp6  ; ptr to pattern addr
-006832  1               @Off = $83 ; Chosen so 8-bit Y turns negative as we step off the end of the name chars.
-006832  1               		; @Off is used because the 65816 doesn't do negative indexes.
-006832  1  A9 7F 00     	lda #@Off-3-1	; char compare start offset
-006835  1  38           	sec
-006836  1  F5 02        	sbc 2,x
-006838  1  85 14        	sta @StartY
-00683A  1               
-00683A  1  B5 04        	lda 4,x		; ptr to pattern
-00683C  1  18           	clc
-00683D  1  E5 14        	sbc @StartY
-00683F  1  85 16        	sta @PatPtr
-006841  1               
-006841  1  E2 20        	sep #P_M	; build @Quick
-006843  1  B5 02        	lda 2,x		;   get pattern length
-006845  1  EB           	xba		;     in hi byte
-006846  1  A0 7F 00     	ldy #@Off-4	; get pattern last char
-006849  1  B1 16        	lda (@PatPtr),y
-00684B  1  C2 20        	rep #P_M
-00684D  1  85 12        	sta @Quick
-00684F  1               
-00684F  1  B5 00        	lda 0,x		; A= wid (wordlist head pointer)
-006851  1  80 07        	bra @WCur
-006853  1               
-006853  1  C2 30        @WNxt:	rep #P_M|P_X
-006855  1  A4 10        	ldy @HdrPtr
-006857  1  B9 81 00     @WNxtY:	lda a:@Off-2,y		;follow link to next header
-00685A  1  F0 4A        @WCur:	beq @nfnd
-00685C  1  38           	sec
-00685D  1  E9 83 00     	sbc #@Off
-006860  1  A8           	tay
-006861  1  B9 7F 00     	lda a:@Off-4,y		;check length & part of last char
-006864  1  45 12        	eor @Quick
-006866  1  29 DF 5F     	and #F_LengthMask<<8+F_Hidden<<8+$df
-006869  1  D0 EC        	bne @WNxtY
-00686B  1               
-00686B  1  84 10        	sty @HdrPtr
-00686D  1  E2 30        	sep #P_M|P_X
-00686F  1  A4 14        	ldy @StartY
-006871  1  C8           @NNxt:	iny
-006872  1  30 17        	bmi @fnd
+0067C5  1  A5 04        	lda U_DP	; link into dictionary chain
+0067C7  1  85 06        	sta U_Latest
+0067C9  1               
+0067C9  1  4C 99 60     	jmp TwoDrop	; drop len addr
+0067CC  1               
+0067CC  1               
+0067CC  1  4E 61 6D 65   Header "Name>String",0 ; ( nt -- c-addr u )  Given a name token, return name as a string
+0067D0  1  3E 53 74 72  
+0067D4  1  69 6E 67 0B  
+0067D8  1  AD 67        
+0067DA  1                 ; https://forth-standard.org/standard/tools/NAMEtoSTRING
+0067DA  1               NameToString:
+0067DA  1  B4 00        	ldy 0,x		; Y= nt
+0067DC  1  88           	dey
+0067DD  1  88           	dey
+0067DE  1  88           	dey
+0067DF  1  B9 00 00     	lda a:0,y	; get flags & length
+0067E2  1  29 1F 00     	and #F_LengthMask
+0067E5  1  48           	pha		; save length
+0067E6  1  98           	tya		; calc name start addr
+0067E7  1  38           	sec
+0067E8  1  E3 01        	sbc 1,s
+0067EA  1  95 00        	sta 0,x		; save c-addr
+0067EC  1  68           	pla		; get length back
+0067ED  1  4C 3B 60     	jmp PushA
+0067F0  1               
+0067F0  1               
+0067F0  1  57 6F 72 64   Header "Words",0 ; ( -- )  Walk dictionary and print names
+0067F4  1  73 05 DA 67  
+0067F8  1                ; https://forth-standard.org/standard/tools/WORDS
+0067F8  1  A5 06        Words:	lda U_Latest		; for each word
+0067FA  1  F0 17        @wloop:	beq @wdone
+0067FC  1  48           	pha
+0067FD  1               
+0067FD  1  20 C1 64     	jsr Space
+006800  1  A3 01        	lda 1,s
+006802  1  20 3B 60     	jsr PushA		;   print name
+006805  1  20 DA 67     	jsr NameToString
+006808  1  20 E2 64     	jsr Type
+00680B  1               
+00680B  1  7A           	ply
+00680C  1  88           	dey
+00680D  1  88           	dey
+00680E  1  B9 00 00     	lda a:0,y		;  next
+006811  1  80 E7        	bra @wloop
+006813  1               
+006813  1               @wdone:
+006813  1  4C AE 64     	jmp CR
+006816  1               
+006816  1               
+006816  1  53 65 61 72   Header "Search-WordList",0 ; ( caddr u wid -- 0 | xt 1 | xt -1)  "Search for a word in a wordlist"
+00681A  1  63 68 2D 57  
+00681E  1  6F 72 64 4C  
+006822  1  69 73 74 0F  
+006826  1  F8 67        
+006828  1                 ; https://forth-standard.org/standard/search/SEARCH_WORDLIST
+006828  1                 ; Find the definition named in the string.
+006828  1                 ; If the definition is not found, return zero.
+006828  1                 ; If the definition is found, return its execution token xt.
+006828  1                 ; If the definition is immediate, also return one (1), otherwise also return minus-one (-1).
+006828  1               Search_WordList:
+006828  1               @HdrPtr	= Temp0  ; ptr to current word Header (-@Off)
+006828  1               @Quick	= Temp2  ; pattern last char & length
+006828  1               @StartY = Temp4  ; char compare start offset
+006828  1               @PatPtr = Temp6  ; ptr to pattern addr
+006828  1               @Off = $83 ; Chosen so 8-bit Y turns negative as we step off the end of the name chars.
+006828  1               		; @Off is used because the 65816 doesn't do negative indexes.
+006828  1  A9 7F 00     	lda #@Off-3-1	; char compare start offset
+00682B  1  38           	sec
+00682C  1  F5 02        	sbc 2,x
+00682E  1  85 14        	sta @StartY
+006830  1               
+006830  1  B5 04        	lda 4,x		; ptr to pattern
+006832  1  18           	clc
+006833  1  E5 14        	sbc @StartY
+006835  1  85 16        	sta @PatPtr
+006837  1               
+006837  1  E2 20        	sep #P_M	; build @Quick
+006839  1  B5 02        	lda 2,x		;   get pattern length
+00683B  1  EB           	xba		;     in hi byte
+00683C  1  A0 7F 00     	ldy #@Off-4	; get pattern last char
+00683F  1  B1 16        	lda (@PatPtr),y
+006841  1  C2 20        	rep #P_M
+006843  1  85 12        	sta @Quick
+006845  1               
+006845  1  B5 00        	lda 0,x		; A= wid (wordlist head pointer)
+006847  1  80 07        	bra @WCur
+006849  1               
+006849  1  C2 30        @WNxt:	rep #P_M|P_X
+00684B  1  A4 10        	ldy @HdrPtr
+00684D  1  B9 81 00     @WNxtY:	lda a:@Off-2,y		;follow link to next header
+006850  1  F0 4A        @WCur:	beq @nfnd
+006852  1  38           	sec
+006853  1  E9 83 00     	sbc #@Off
+006856  1  A8           	tay
+006857  1  B9 7F 00     	lda a:@Off-4,y		;check length & part of last char
+00685A  1  45 12        	eor @Quick
+00685C  1  29 DF 5F     	and #F_LengthMask<<8+F_Hidden<<8+$df
+00685F  1  D0 EC        	bne @WNxtY
+006861  1               
+006861  1  84 10        	sty @HdrPtr
+006863  1  E2 30        	sep #P_M|P_X
+006865  1  A4 14        	ldy @StartY
+006867  1  C8           @NNxt:	iny
+006868  1  30 17        	bmi @fnd
+00686A  1  B1 10        	lda (@HdrPtr),y
+00686C  1  51 16        	eor (@PatPtr),y
+00686E  1  F0 F7        	beq @NNxt
+006870  1  29 DF        	and #$df
+006872  1  D0 D5        	bne @WNxt
 006874  1  B1 10        	lda (@HdrPtr),y
-006876  1  51 16        	eor (@PatPtr),y
-006878  1  F0 F7        	beq @NNxt
-00687A  1  29 DF        	and #$df
-00687C  1  D0 D5        	bne @WNxt
-00687E  1  B1 10        	lda (@HdrPtr),y
-006880  1  29 DF        	and #$df
-006882  1  38           	sec
-006883  1  E9 41        	sbc #'A'
-006885  1  C9 1A        	cmp #'Z'-'A'+1
-006887  1  90 E8        	bcc @NNxt
-006889  1  80 C8        	bra @WNxt
-00688B  1               
-00688B  1               @fnd:			;found the word
-00688B  1  C2 30        	rep #P_M|P_X
-00688D  1  A0 7F 00     	ldy #@Off-3-1	; set flag
-006890  1  B1 10        	lda (@HdrPtr),y
-006892  1  09 FF 7F     	ora #$7fff
-006895  1  30 03        	bmi @fnd2
-006897  1  A9 01 00     	lda #1
-00689A  1  95 02        @fnd2:	sta 2,x
-00689C  1  A5 10        	lda @HdrPtr	; set xt
-00689E  1  18           	clc
-00689F  1  69 83 00     	adc #@Off
-0068A2  1  95 04        	sta 4,x
-0068A4  1  80 04        	bra @99
-0068A6  1               
-0068A6  1               @nfnd:			;word not found
-0068A6  1  74 04        	stz 4,x		; set flag
-0068A8  1  E8           	inx		; drop len
-0068A9  1  E8           	inx
-0068AA  1  E8           @99:	inx		; drop wid
-0068AB  1  E8           	inx
-0068AC  1  60           	rts
-0068AD  1               
-0068AD  1               
-0068AD  1  27 01 32 68   Header "'",0 ; ( "name" -- xt )  find a word
-0068B1  1  20 DD 6A     Tick:	jsr Parse_Name		; get name
-0068B4  1  A5 06        	lda U_Latest		; search for it
-0068B6  1  20 3B 60     	jsr PushA
-0068B9  1  20 32 68     	jsr Search_WordList
-0068BC  1  20 07 66     	jsr ZBranchTest		; if not found...
-0068BF  1  F0 01        	beq @NotFound
-0068C1  1  60           	rts
-0068C2  1               
-0068C2  1               @NotFound:
-0068C2  1  20 7F 6B     	jsr Abort
-0068C5  1               
-0068C5  1               
-0068C5  1  43 6F 6E 73   Header "Constant",0 ; ( "name" n -- )  Define a constant word
-0068C9  1  74 61 6E 74  
-0068CD  1  08 B1 68     
-0068D0  1                 ; https://forth-standard.org/standard/core/CONSTANT
-0068D0  1               Constant:
-0068D0  1  20 DD 6A     	jsr Parse_Name	; get name
-0068D3  1  20 B7 67     	jsr HeaderComma	; compile header
-0068D6  1  20 80 67     	jsr LdaIComma	; compile lda #
-0068D9  1  A9 3B 60     	lda #PushA	; compile jmp PushA
-0068DC  1  4C 72 67     	jmp JmpCommaA
-0068DF  1               
-0068DF  1               
-0068DF  1  56 61 72 69   Header "Variable",0 ; ( "name" -- )  Define a variable word
-0068E3  1  61 62 6C 65  
-0068E7  1  08 D0 68     
-0068EA  1                 ; https://forth-standard.org/standard/core/VARIABLE
-0068EA  1               Variable:
-0068EA  1  20 FC 68     	jsr Create
-0068ED  1  A9 00 00     	lda #0
-0068F0  1  4C 35 67     	jmp CommaA	; allot & init data cell
-0068F3  1               
-0068F3  1               
-0068F3  1               ; Header "Smudge",0 ; ( -- )
-0068F3  1               
-0068F3  1               
-0068F3  1               ; Header "Immediate",F_Immediate ; ( -- )  Mark latest word as immediate
-0068F3  1                 ; https://forth-standard.org/standard/core/IMMEDIATE
-0068F3  1               
-0068F3  1               
-0068F3  1  43 72 65 61   Header "Create",0 ; ( "name" -- )  Create a word that pushes the addr of it's parameter field
-0068F7  1  74 65 06 EA  
-0068FB  1  68           
-0068FC  1                 ; https://forth-standard.org/standard/core/CREATE
-0068FC  1  20 DD 6A     Create: jsr Parse_Name		; get name
-0068FF  1  20 B7 67     	jsr HeaderComma		; compile word header
-006902  1  A9 08 69     	lda #@DoVar		; compile jsr @DoVar
-006905  1  4C 5D 67     	jmp CompileCommaA
-006908  1               
-006908  1               
-006908  1               @DoVar: ; Pushes the address of the word body onto parameter stack.
-006908  1  68           	pla		; get rts addr
-006909  1  1A           	ina		; move to body (after jsr)
-00690A  1  4C 3B 60     	jmp PushA	; Push onto parameter stack
-00690D  1               
-00690D  1               
-00690D  1  44 6F 65 73   Header "Does>", F_Immediate ;
-006911  1  3E 85 FC 68  
-006915  1                 ; https://forth-standard.org/standard/core/DOES
-006915  1  A9 27 69     Does:	lda #@DoDoes		; compile jsr @DoDoes
-006918  1  20 5D 67     	jsr CompileCommaA
-00691B  1               				; start compiling code after Does>
-00691B  1  A9 68 1A     	lda #$1a68		; compile: pla; ina	get addr of body of created word
-00691E  1  20 35 67     	jsr CommaA
-006921  1  A9 3B 60     	lda #PushA		; compile jsr PushA
-006924  1  4C 5D 67     	jmp CompileCommaA
-006927  1               
-006927  1               @DoDoes:
-006927  1  68           	pla			; get addr of code after Does>
-006928  1  1A           	ina
-006929  1  A4 06        	ldy U_Latest		; patch jsr DoVar compiled by Create
-00692B  1  99 01 00     	sta a:1,y
-00692E  1  60           	rts			; return to caller of word containing Does>
-00692F  1               
-00692F  1               
-00692F  1  2E 22 82 15   Header '."',F_Immediate ; ( string" -- )  Type a string literal
-006933  1  69           
-006934  1                 ; https://forth-standard.org/standard/core/Dotq
-006934  1               DotQuote:
-006934  1  20 96 6A     	jsr ParseQuote		; get string
-006937  1  A5 02        	lda U_State
-006939  1  F0 09        	beq @interp		; if compiling
-00693B  1               
-00693B  1  A9 47 69     	lda #DotQuoteRun	; compile jsr DotQuoteRun
-00693E  1  20 5D 67     	jsr CompileCommaA
-006941  1  4C 9A 67     	jmp StringComma		; compile string length & chars
-006944  1               
-006944  1  4C E2 64     @interp: jmp Type		; type the string
-006947  1               
-006947  1               
-006947  1               DotQuoteRun:
-006947  1  20 4D 69     	jsr @GetInlineString
-00694A  1  4C E2 64     	jmp Type
-00694D  1               
-00694D  1               
-00694D  1               @GetInlineString: ; ( -- caddr len )
-00694D  1  A3 03        	lda 3,s		; get caller's caller's rts addr
-00694F  1  A8           	tay
-006950  1  C8           	iny
-006951  1  B9 00 00     	lda a:0,y	; get length
-006954  1  C8           	iny		; skip over length
-006955  1  C8           	iny
-006956  1  CA           	dex		; push caddr
-006957  1  CA           	dex
-006958  1  94 00        	sty 0,x
-00695A  1  CA           	dex		; push len
-00695B  1  CA           	dex
-00695C  1  95 00        	sta 0,x
-00695E  1  18           	clc		; skip over chars
-00695F  1  75 02        	adc 2,x
-006961  1  3A           	dea		; update rts addr
-006962  1  83 03        	sta 3,s
-006964  1  60           	rts
-006965  1               
-006965  1               
-006965  1  53 22 82 34   Header 'S"',F_Immediate ; ( -- caddr len )  create a string literal
-006969  1  69           
-00696A  1                 ; https://forth-standard.org/standard/core/Sq
-00696A  1  20 96 6A     SQuote: jsr ParseQuote		; get string
-00696D  1  A5 02        	lda U_State
-00696F  1  F0 09        	beq @interp		; if compiling
-006971  1               
-006971  1  A9 94 69     	lda #GetInlineString
-006974  1  20 5D 67     	jsr CompileCommaA
-006977  1  4C 9A 67     	jmp StringComma
-00697A  1               
-00697A  1  B5 00        @interp: lda 0,x
-00697C  1  48           	pha			; save length
-00697D  1  D4 04        	pei (U_DP)		; save addr
-00697F  1  20 16 67     	jsr Here
-006982  1  20 51 60     	jsr Swap
-006985  1  B5 00        	lda 0,x
-006987  1  20 27 67     	jsr AllotA
-00698A  1  20 19 64     	jsr CMove		; copy string
-00698D  1  20 16 61     	jsr RFrom
-006990  1  20 16 61     	jsr RFrom	; stack caddr & len
-006993  1  60           	rts
-006994  1               
-006994  1               GetInlineString: ; ( -- caddr len )
-006994  1  7A           	ply		; get rts addr
-006995  1  B9 01 00     	lda a:1,y	; get length
-006998  1  C8           	iny		; skip over length
-006999  1  C8           	iny
-00699A  1  C8           	iny
-00699B  1  CA           	dex		; push caddr
-00699C  1  CA           	dex
-00699D  1  94 00        	sty 0,x
-00699F  1  CA           	dex		; push len
-0069A0  1  CA           	dex
-0069A1  1  95 00        	sta 0,x
-0069A3  1  18           	clc		; skip over chars
-0069A4  1  75 02        	adc 2,x
-0069A6  1  3A           	dea
-0069A7  1  48           	pha
-0069A8  1  60           	rts
-0069A9  1               
-0069A9  1               
-0069A9  1  4D 75 73 74   Header "MustBeCompiling",0 ; ( -- ) make sure we're compiling
-0069AD  1  42 65 43 6F  
-0069B1  1  6D 70 69 6C  
-0069B5  1  69 6E 67 0F  
-0069B9  1  6A 69        
-0069BB  1               MustBeCompiling:
-0069BB  1  A5 02        	lda U_State
-0069BD  1  D0 03        	bne @9
-0069BF  1  20 7F 6B     	jsr Abort
-0069C2  1  60           @9:	rts
-0069C3  1               
-0069C3  1               
-0069C3  1  41 62 6F 72   Header 'Abort"', F_Immediate ; If f is true, print string & abort
-0069C7  1  74 22 86 BB  
-0069CB  1  69           
-0069CC  1                 ;  abort-quote  https://forth-standard.org/standard/core/ABORTq
-0069CC  1  20 96 6A     AbortQ: jsr ParseQuote
-0069CF  1  20 BB 69     	jsr MustBeCompiling
-0069D2  1  A9 DC 69     	lda #AbortQRun
-0069D5  1  20 5D 67     	jsr CompileCommaA
-0069D8  1  20 9A 67     	jsr StringComma
-0069DB  1  60           	rts
-0069DC  1               
-0069DC  1               AbortQRun: ; ( f -- ) runtime code ------
-0069DC  1  B5 00        	lda 0,x		; get f
-0069DE  1  D0 0B        	bne @Abort
-0069E0  1  E8           	inx		; Drop f
-0069E1  1  E8           	inx
-0069E2  1  7A           	ply		; skip string
-0069E3  1  98           	tya
-0069E4  1  38           	sec
-0069E5  1  79 01 00     	adc a:1,y
-0069E8  1  1A           	ina
-0069E9  1  48           	pha
-0069EA  1  60           	rts
-0069EB  1               
-0069EB  1  7A           @Abort:	ply
-0069EC  1  5A           	phy
-0069ED  1  C8           	iny
-0069EE  1  B9 00 00     	lda a:0,y	; get string length
-0069F1  1  C8           	iny		; get string addr
-0069F2  1  C8           	iny
-0069F3  1  94 00        	sty 0,x		; push strin addr
-0069F5  1  CA           	dex		; push string length
-0069F6  1  CA           	dex
-0069F7  1  95 00        	sta 0,x
-0069F9  1               
-0069F9  1  20 E2 64     	jsr Type
-0069FC  1  4C 7F 6B     	jmp Abort
-0069FF  1               
-0069FF  1               ;==============================================================================
-0069FF  1               ; SECTION 10: USER AREA ACCESSORS
-0069FF  1               
-0069FF  1               PushAU: ; ( A -- adr ) push user variable address
-0069FF  1  0B           	phd		; get user area base
-006A00  1  18           	clc		; add offset
-006A01  1  63 01        	adc 1,s
-006A03  1  7A           	ply		; RDrop base
-006A04  1  4C 3B 60     	jmp PushA	; Push A
-006A07  1               
-006A07  1  4C 61 74 65   Header "Latest",0 ; ( -- addr ) address of LATEST variable in user area
-006A0B  1  73 74 06 CC  
-006A0F  1  69           
-006A10  1  A9 06 00     Latest:	lda #U_Latest
-006A13  1  80 EA        	bra PushAU
-006A15  1               
-006A15  1  42 61 73 65   Header "Base",0 ; ( -- addr ) address of BASE variable
-006A19  1  04 10 6A     
-006A1C  1  A9 00 00     Base:	lda #U_Base
-006A1F  1  80 DE        	bra PushAU
-006A21  1               
-006A21  1  53 74 61 74   Header "State",0 ; ( -- addr ) address of STATE variable
-006A25  1  65 05 1C 6A  
-006A29  1  A9 02 00     State:	lda #U_State
-006A2C  1  80 D1        	bra PushAU
-006A2E  1               
-006A2E  1  3E 49 6E 03   Header ">In",0 ; ( -- addr ) address of >IN variable
-006A32  1  29 6A        
-006A34  1  A9 0C 00     ToIn:	lda #U_ToIn
-006A37  1  80 C6        	bra PushAU
-006A39  1               
-006A39  1               ; Header "ParseLen",0 ; ( -- adr ) Push source length
-006A39  1               ;ParseLen: lda #U_ParseLen
-006A39  1               ;	bra PushAU
-006A39  1               
-006A39  1               ; Header "ParseBuf",0 ; ( -- adr ) Push source addr
-006A39  1               ;ParseBuf: lda #U_ParseBuf
-006A39  1               ;	bra PushAU
-006A39  1               
-006A39  1  53 6F 75 72   Header "Source",0 ; ( -- addr len ) current input source
-006A3D  1  63 65 06 34  
-006A41  1  6A           
-006A42  1                 ; https://forth-standard.org/standard/core/SOURCE
-006A42  1  A5 08        Source: lda U_ParseBuf
-006A44  1  A4 0A        	ldy U_ParseLen
-006A46  1  4C AC 60     	jmp PushYA
-006A49  1               
-006A49  1               
-006A49  1  44 65 63 69   Header "Decimal",0 ; ( -- )  set base to 10
-006A4D  1  6D 61 6C 07  
-006A51  1  42 6A        
-006A53  1                 ; https://forth-standard.org/standard/core/DECIMAL
-006A53  1  A9 0A 00     Decimal: lda #10		; User area: BASE = 10
-006A56  1  85 00        Decim3:	sta U_Base
-006A58  1  60           	rts
-006A59  1               
-006A59  1  48 65 78 03   Header "Hex",0 ; ( -- )  set base to 16
-006A5D  1  53 6A        
-006A5F  1                 ; https://forth-standard.org/standard/core/HEX
-006A5F  1  A9 10 00     Hex:	lda #$10	; User area: BASE = 16
-006A62  1  80 F2        	bra Decim3
-006A64  1               
-006A64  1               ;==============================================================================
-006A64  1               ; SECTION 11: STRING AND PARSE
-006A64  1               
-006A64  1               
-006A64  1               ; Header "Bl",0 ; ( -- n ) ASCII value of space (blank)
-006A64  1               
-006A64  1               
-006A64  1  43 6F 75 6E   Header "Count",0 ; ( addr -- addr+1 len ) counted string to addr/len
-006A68  1  74 05 5F 6A  
-006A6C  1                 ; https://forth-standard.org/standard/core/COUNT
-006A6C  1  A1 00        Count:	lda (0,x)	; get length byte
-006A6E  1  29 FF 00     	and #$ff
-006A71  1  F6 00        	inc 0,x
-006A73  1  4C 3B 60     	jmp PushA
-006A76  1               
-006A76  1               
-006A76  1                .if 0
-006A76  1                Header "Bounds",0 ; ( addr u -- addr+u addr ) Prepare address for looping
-006A76  1                 ; http://www.complang.tuwien.ac.at/forth/gforth/Docs-html/Memory-Blocks.html
-006A76  1               Bounds:	lda 0,x
-006A76  1               	ldy 2,x
-006A76  1               	clc
-006A76  1               	adc 2,x
-006A76  1               	sta 2,x
-006A76  1               	sty 0,x
-006A76  1               	rts
-006A76  1                 .endif
-006A76  1               
-006A76  1               
-006A76  1               ; Header "-Trailing",0 ; ( addr n1 -- addr n2 )  trim trailing spaces
-006A76  1               
-006A76  1               ; Header "Upper",0 ; ( addr len -- )  Convert chars to uppercase
-006A76  1               
-006A76  1  28 81 6C 6A   Header "(",F_Immediate ; (  ccc(paren)  -- )  Comment
-006A7A  1                 ; https://forth-standard.org/standard/file/p
-006A7A  1                 ; http://forth-standard.org/standard/core/p
-006A7A  1               Comment:
-006A7A  1  A9 29 00     	lda #')'
-006A7D  1  20 99 6A     	jsr ParseA
-006A80  1  4C 99 60     	jmp TwoDrop
-006A83  1               
-006A83  1               
-006A83  1  5C 81 7A 6A   Header "\",F_Immediate ; ( -- )  Eat remainder of parse line as a comment
-006A87  1                 ; https://forth-standard.org/standard/core/bs
-006A87  1  A5 0A        BSlash:	lda U_ParseLen
-006A89  1  85 0C        	sta U_ToIn
-006A8B  1  60           	rts
+006876  1  29 DF        	and #$df
+006878  1  38           	sec
+006879  1  E9 41        	sbc #'A'
+00687B  1  C9 1A        	cmp #'Z'-'A'+1
+00687D  1  90 E8        	bcc @NNxt
+00687F  1  80 C8        	bra @WNxt
+006881  1               
+006881  1               @fnd:			;found the word
+006881  1  C2 30        	rep #P_M|P_X
+006883  1  A0 7F 00     	ldy #@Off-3-1	; set flag
+006886  1  B1 10        	lda (@HdrPtr),y
+006888  1  09 FF 7F     	ora #$7fff
+00688B  1  30 03        	bmi @fnd2
+00688D  1  A9 01 00     	lda #1
+006890  1  95 02        @fnd2:	sta 2,x
+006892  1  A5 10        	lda @HdrPtr	; set xt
+006894  1  18           	clc
+006895  1  69 83 00     	adc #@Off
+006898  1  95 04        	sta 4,x
+00689A  1  80 04        	bra @99
+00689C  1               
+00689C  1               @nfnd:			;word not found
+00689C  1  74 04        	stz 4,x		; set flag
+00689E  1  E8           	inx		; drop len
+00689F  1  E8           	inx
+0068A0  1  E8           @99:	inx		; drop wid
+0068A1  1  E8           	inx
+0068A2  1  60           	rts
+0068A3  1               
+0068A3  1               
+0068A3  1  27 01 28 68   Header "'",0 ; ( "name" -- xt )  find a word
+0068A7  1  20 D3 6A     Tick:	jsr Parse_Name		; get name
+0068AA  1  A5 06        	lda U_Latest		; search for it
+0068AC  1  20 3B 60     	jsr PushA
+0068AF  1  20 28 68     	jsr Search_WordList
+0068B2  1  20 07 66     	jsr ZBranchTest		; if not found...
+0068B5  1  F0 01        	beq @NotFound
+0068B7  1  60           	rts
+0068B8  1               
+0068B8  1               @NotFound:
+0068B8  1  20 75 6B     	jsr Abort
+0068BB  1               
+0068BB  1               
+0068BB  1  43 6F 6E 73   Header "Constant",0 ; ( "name" n -- )  Define a constant word
+0068BF  1  74 61 6E 74  
+0068C3  1  08 A7 68     
+0068C6  1                 ; https://forth-standard.org/standard/core/CONSTANT
+0068C6  1               Constant:
+0068C6  1  20 D3 6A     	jsr Parse_Name	; get name
+0068C9  1  20 AD 67     	jsr HeaderComma	; compile header
+0068CC  1  20 76 67     	jsr LdaIComma	; compile lda #
+0068CF  1  A9 3B 60     	lda #PushA	; compile jmp PushA
+0068D2  1  4C 68 67     	jmp JmpCommaA
+0068D5  1               
+0068D5  1               
+0068D5  1  56 61 72 69   Header "Variable",0 ; ( "name" -- )  Define a variable word
+0068D9  1  61 62 6C 65  
+0068DD  1  08 C6 68     
+0068E0  1                 ; https://forth-standard.org/standard/core/VARIABLE
+0068E0  1               Variable:
+0068E0  1  20 F2 68     	jsr Create
+0068E3  1  A9 00 00     	lda #0
+0068E6  1  4C 2B 67     	jmp CommaA	; allot & init data cell
+0068E9  1               
+0068E9  1               
+0068E9  1               ; Header "Smudge",0 ; ( -- )
+0068E9  1               
+0068E9  1               
+0068E9  1               ; Header "Immediate",F_Immediate ; ( -- )  Mark latest word as immediate
+0068E9  1                 ; https://forth-standard.org/standard/core/IMMEDIATE
+0068E9  1               
+0068E9  1               
+0068E9  1  43 72 65 61   Header "Create",0 ; ( "name" -- )  Create a word that pushes the addr of it's parameter field
+0068ED  1  74 65 06 E0  
+0068F1  1  68           
+0068F2  1                 ; https://forth-standard.org/standard/core/CREATE
+0068F2  1  20 D3 6A     Create: jsr Parse_Name		; get name
+0068F5  1  20 AD 67     	jsr HeaderComma		; compile word header
+0068F8  1  A9 FE 68     	lda #@DoVar		; compile jsr @DoVar
+0068FB  1  4C 53 67     	jmp CompileCommaA
+0068FE  1               
+0068FE  1               
+0068FE  1               @DoVar: ; Pushes the address of the word body onto parameter stack.
+0068FE  1  68           	pla		; get rts addr
+0068FF  1  1A           	ina		; move to body (after jsr)
+006900  1  4C 3B 60     	jmp PushA	; Push onto parameter stack
+006903  1               
+006903  1               
+006903  1  44 6F 65 73   Header "Does>", F_Immediate ;
+006907  1  3E 85 F2 68  
+00690B  1                 ; https://forth-standard.org/standard/core/DOES
+00690B  1  A9 1D 69     Does:	lda #@DoDoes		; compile jsr @DoDoes
+00690E  1  20 53 67     	jsr CompileCommaA
+006911  1               				; start compiling code after Does>
+006911  1  A9 68 1A     	lda #$1a68		; compile: pla; ina	get addr of body of created word
+006914  1  20 2B 67     	jsr CommaA
+006917  1  A9 3B 60     	lda #PushA		; compile jsr PushA
+00691A  1  4C 53 67     	jmp CompileCommaA
+00691D  1               
+00691D  1               @DoDoes:
+00691D  1  68           	pla			; get addr of code after Does>
+00691E  1  1A           	ina
+00691F  1  A4 06        	ldy U_Latest		; patch jsr DoVar compiled by Create
+006921  1  99 01 00     	sta a:1,y
+006924  1  60           	rts			; return to caller of word containing Does>
+006925  1               
+006925  1               
+006925  1  2E 22 82 0B   Header '."',F_Immediate ; ( string" -- )  Type a string literal
+006929  1  69           
+00692A  1                 ; https://forth-standard.org/standard/core/Dotq
+00692A  1               DotQuote:
+00692A  1  20 8C 6A     	jsr ParseQuote		; get string
+00692D  1  A5 02        	lda U_State
+00692F  1  F0 09        	beq @interp		; if compiling
+006931  1               
+006931  1  A9 3D 69     	lda #DotQuoteRun	; compile jsr DotQuoteRun
+006934  1  20 53 67     	jsr CompileCommaA
+006937  1  4C 90 67     	jmp StringComma		; compile string length & chars
+00693A  1               
+00693A  1  4C E2 64     @interp: jmp Type		; type the string
+00693D  1               
+00693D  1               
+00693D  1               DotQuoteRun:
+00693D  1  20 43 69     	jsr @GetInlineString
+006940  1  4C E2 64     	jmp Type
+006943  1               
+006943  1               
+006943  1               @GetInlineString: ; ( -- caddr len )
+006943  1  A3 03        	lda 3,s		; get caller's caller's rts addr
+006945  1  A8           	tay
+006946  1  C8           	iny
+006947  1  B9 00 00     	lda a:0,y	; get length
+00694A  1  C8           	iny		; skip over length
+00694B  1  C8           	iny
+00694C  1  CA           	dex		; push caddr
+00694D  1  CA           	dex
+00694E  1  94 00        	sty 0,x
+006950  1  CA           	dex		; push len
+006951  1  CA           	dex
+006952  1  95 00        	sta 0,x
+006954  1  18           	clc		; skip over chars
+006955  1  75 02        	adc 2,x
+006957  1  3A           	dea		; update rts addr
+006958  1  83 03        	sta 3,s
+00695A  1  60           	rts
+00695B  1               
+00695B  1               
+00695B  1  53 22 82 2A   Header 'S"',F_Immediate ; ( -- caddr len )  create a string literal
+00695F  1  69           
+006960  1                 ; https://forth-standard.org/standard/core/Sq
+006960  1  20 8C 6A     SQuote: jsr ParseQuote		; get string
+006963  1  A5 02        	lda U_State
+006965  1  F0 09        	beq @interp		; if compiling
+006967  1               
+006967  1  A9 8A 69     	lda #GetInlineString
+00696A  1  20 53 67     	jsr CompileCommaA
+00696D  1  4C 90 67     	jmp StringComma
+006970  1               
+006970  1  B5 00        @interp: lda 0,x
+006972  1  48           	pha			; save length
+006973  1  D4 04        	pei (U_DP)		; save addr
+006975  1  20 0C 67     	jsr Here
+006978  1  20 51 60     	jsr Swap
+00697B  1  B5 00        	lda 0,x
+00697D  1  20 1D 67     	jsr AllotA
+006980  1  20 19 64     	jsr CMove		; copy string
+006983  1  20 16 61     	jsr RFrom
+006986  1  20 16 61     	jsr RFrom	; stack caddr & len
+006989  1  60           	rts
+00698A  1               
+00698A  1               GetInlineString: ; ( -- caddr len )
+00698A  1  7A           	ply		; get rts addr
+00698B  1  B9 01 00     	lda a:1,y	; get length
+00698E  1  C8           	iny		; skip over length
+00698F  1  C8           	iny
+006990  1  C8           	iny
+006991  1  CA           	dex		; push caddr
+006992  1  CA           	dex
+006993  1  94 00        	sty 0,x
+006995  1  CA           	dex		; push len
+006996  1  CA           	dex
+006997  1  95 00        	sta 0,x
+006999  1  18           	clc		; skip over chars
+00699A  1  75 02        	adc 2,x
+00699C  1  3A           	dea
+00699D  1  48           	pha
+00699E  1  60           	rts
+00699F  1               
+00699F  1               
+00699F  1  4D 75 73 74   Header "MustBeCompiling",0 ; ( -- ) make sure we're compiling
+0069A3  1  42 65 43 6F  
+0069A7  1  6D 70 69 6C  
+0069AB  1  69 6E 67 0F  
+0069AF  1  60 69        
+0069B1  1               MustBeCompiling:
+0069B1  1  A5 02        	lda U_State
+0069B3  1  D0 03        	bne @9
+0069B5  1  20 75 6B     	jsr Abort
+0069B8  1  60           @9:	rts
+0069B9  1               
+0069B9  1               
+0069B9  1  41 62 6F 72   Header 'Abort"', F_Immediate ; If f is true, print string & abort
+0069BD  1  74 22 86 B1  
+0069C1  1  69           
+0069C2  1                 ;  abort-quote  https://forth-standard.org/standard/core/ABORTq
+0069C2  1  20 8C 6A     AbortQ: jsr ParseQuote
+0069C5  1  20 B1 69     	jsr MustBeCompiling
+0069C8  1  A9 D2 69     	lda #AbortQRun
+0069CB  1  20 53 67     	jsr CompileCommaA
+0069CE  1  20 90 67     	jsr StringComma
+0069D1  1  60           	rts
+0069D2  1               
+0069D2  1               AbortQRun: ; ( f -- ) runtime code ------
+0069D2  1  B5 00        	lda 0,x		; get f
+0069D4  1  D0 0B        	bne @Abort
+0069D6  1  E8           	inx		; Drop f
+0069D7  1  E8           	inx
+0069D8  1  7A           	ply		; skip string
+0069D9  1  98           	tya
+0069DA  1  38           	sec
+0069DB  1  79 01 00     	adc a:1,y
+0069DE  1  1A           	ina
+0069DF  1  48           	pha
+0069E0  1  60           	rts
+0069E1  1               
+0069E1  1  7A           @Abort:	ply
+0069E2  1  5A           	phy
+0069E3  1  C8           	iny
+0069E4  1  B9 00 00     	lda a:0,y	; get string length
+0069E7  1  C8           	iny		; get string addr
+0069E8  1  C8           	iny
+0069E9  1  94 00        	sty 0,x		; push strin addr
+0069EB  1  CA           	dex		; push string length
+0069EC  1  CA           	dex
+0069ED  1  95 00        	sta 0,x
+0069EF  1               
+0069EF  1  20 E2 64     	jsr Type
+0069F2  1  4C 75 6B     	jmp Abort
+0069F5  1               
+0069F5  1               ;==============================================================================
+0069F5  1               ; SECTION 10: USER AREA ACCESSORS
+0069F5  1               
+0069F5  1               PushAU: ; ( A -- adr ) push user variable address
+0069F5  1  0B           	phd		; get user area base
+0069F6  1  18           	clc		; add offset
+0069F7  1  63 01        	adc 1,s
+0069F9  1  7A           	ply		; RDrop base
+0069FA  1  4C 3B 60     	jmp PushA	; Push A
+0069FD  1               
+0069FD  1  4C 61 74 65   Header "Latest",0 ; ( -- addr ) address of LATEST variable in user area
+006A01  1  73 74 06 C2  
+006A05  1  69           
+006A06  1  A9 06 00     Latest:	lda #U_Latest
+006A09  1  80 EA        	bra PushAU
+006A0B  1               
+006A0B  1  42 61 73 65   Header "Base",0 ; ( -- addr ) address of BASE variable
+006A0F  1  04 06 6A     
+006A12  1  A9 00 00     Base:	lda #U_Base
+006A15  1  80 DE        	bra PushAU
+006A17  1               
+006A17  1  53 74 61 74   Header "State",0 ; ( -- addr ) address of STATE variable
+006A1B  1  65 05 12 6A  
+006A1F  1  A9 02 00     State:	lda #U_State
+006A22  1  80 D1        	bra PushAU
+006A24  1               
+006A24  1  3E 49 6E 03   Header ">In",0 ; ( -- addr ) address of >IN variable
+006A28  1  1F 6A        
+006A2A  1  A9 0C 00     ToIn:	lda #U_ToIn
+006A2D  1  80 C6        	bra PushAU
+006A2F  1               
+006A2F  1               ; Header "ParseLen",0 ; ( -- adr ) Push source length
+006A2F  1               ;ParseLen: lda #U_ParseLen
+006A2F  1               ;	bra PushAU
+006A2F  1               
+006A2F  1               ; Header "ParseBuf",0 ; ( -- adr ) Push source addr
+006A2F  1               ;ParseBuf: lda #U_ParseBuf
+006A2F  1               ;	bra PushAU
+006A2F  1               
+006A2F  1  53 6F 75 72   Header "Source",0 ; ( -- addr len ) current input source
+006A33  1  63 65 06 2A  
+006A37  1  6A           
+006A38  1                 ; https://forth-standard.org/standard/core/SOURCE
+006A38  1  A5 08        Source: lda U_ParseBuf
+006A3A  1  A4 0A        	ldy U_ParseLen
+006A3C  1  4C AC 60     	jmp PushYA
+006A3F  1               
+006A3F  1               
+006A3F  1  44 65 63 69   Header "Decimal",0 ; ( -- )  set base to 10
+006A43  1  6D 61 6C 07  
+006A47  1  38 6A        
+006A49  1                 ; https://forth-standard.org/standard/core/DECIMAL
+006A49  1  A9 0A 00     Decimal: lda #10		; User area: BASE = 10
+006A4C  1  85 00        Decim3:	sta U_Base
+006A4E  1  60           	rts
+006A4F  1               
+006A4F  1  48 65 78 03   Header "Hex",0 ; ( -- )  set base to 16
+006A53  1  49 6A        
+006A55  1                 ; https://forth-standard.org/standard/core/HEX
+006A55  1  A9 10 00     Hex:	lda #$10	; User area: BASE = 16
+006A58  1  80 F2        	bra Decim3
+006A5A  1               
+006A5A  1               ;==============================================================================
+006A5A  1               ; SECTION 11: STRING AND PARSE
+006A5A  1               
+006A5A  1               
+006A5A  1               ; Header "Bl",0 ; ( -- n ) ASCII value of space (blank)
+006A5A  1               
+006A5A  1               
+006A5A  1  43 6F 75 6E   Header "Count",0 ; ( addr -- addr+1 len ) counted string to addr/len
+006A5E  1  74 05 55 6A  
+006A62  1                 ; https://forth-standard.org/standard/core/COUNT
+006A62  1  A1 00        Count:	lda (0,x)	; get length byte
+006A64  1  29 FF 00     	and #$ff
+006A67  1  F6 00        	inc 0,x
+006A69  1  4C 3B 60     	jmp PushA
+006A6C  1               
+006A6C  1               
+006A6C  1                .if 0
+006A6C  1                Header "Bounds",0 ; ( addr u -- addr+u addr ) Prepare address for looping
+006A6C  1                 ; http://www.complang.tuwien.ac.at/forth/gforth/Docs-html/Memory-Blocks.html
+006A6C  1               Bounds:	lda 0,x
+006A6C  1               	ldy 2,x
+006A6C  1               	clc
+006A6C  1               	adc 2,x
+006A6C  1               	sta 2,x
+006A6C  1               	sty 0,x
+006A6C  1               	rts
+006A6C  1                 .endif
+006A6C  1               
+006A6C  1               
+006A6C  1               ; Header "-Trailing",0 ; ( addr n1 -- addr n2 )  trim trailing spaces
+006A6C  1               
+006A6C  1               ; Header "Upper",0 ; ( addr len -- )  Convert chars to uppercase
+006A6C  1               
+006A6C  1  28 81 62 6A   Header "(",F_Immediate ; (  ccc(paren)  -- )  Comment
+006A70  1                 ; https://forth-standard.org/standard/file/p
+006A70  1                 ; http://forth-standard.org/standard/core/p
+006A70  1               Comment:
+006A70  1  A9 29 00     	lda #')'
+006A73  1  20 8F 6A     	jsr ParseA
+006A76  1  4C 99 60     	jmp TwoDrop
+006A79  1               
+006A79  1               
+006A79  1  5C 81 70 6A   Header "\",F_Immediate ; ( -- )  Eat remainder of parse line as a comment
+006A7D  1                 ; https://forth-standard.org/standard/core/bs
+006A7D  1  A5 0A        BSlash:	lda U_ParseLen
+006A7F  1  85 0C        	sta U_ToIn
+006A81  1  60           	rts
+006A82  1               
+006A82  1               
+006A82  1  50 61 72 73   Header "Parse",0 ; ( "name" c -- addr u )  "Parse input with delimiter character"
+006A86  1  65 05 7D 6A  
+006A8A  1                 ; https://forth-standard.org/standard/core/PARSE
+006A8A  1                 ; Find word in input string delimited by character given. Do not skip leading delimiters
+006A8A  1                 ; -- this is the main difference to PARSE-NAME.
+006A8A  1                 ; ANSI discussion: http://www.forth200x.org/documents/html3/rationale.html#rat:core:PARSE
+006A8A  1  80 06        Parse:	bra Parse2
 006A8C  1               
-006A8C  1               
-006A8C  1  50 61 72 73   Header "Parse",0 ; ( "name" c -- addr u )  "Parse input with delimiter character"
-006A90  1  65 05 87 6A  
-006A94  1                 ; https://forth-standard.org/standard/core/PARSE
-006A94  1                 ; Find word in input string delimited by character given. Do not skip leading delimiters
-006A94  1                 ; -- this is the main difference to PARSE-NAME.
-006A94  1                 ; ANSI discussion: http://www.forth200x.org/documents/html3/rationale.html#rat:core:PARSE
-006A94  1  80 06        Parse:	bra Parse2
+006A8C  1  A9 22 00     ParseQuote: lda #'"'
+006A8F  1  20 3B 60     ParseA:	jsr PushA
+006A92  1  CA           Parse2:	dex			; alloc 2nd parm cell
+006A93  1  CA           	dex
+006A94  1  E2 20        	sep #P_M
 006A96  1               
-006A96  1  A9 22 00     ParseQuote: lda #'"'
-006A99  1  20 3B 60     ParseA:	jsr PushA
-006A9C  1  CA           Parse2:	dex			; alloc 2nd parm cell
-006A9D  1  CA           	dex
-006A9E  1  E2 20        	sep #P_M
-006AA0  1               
-006AA0  1  A4 0C        	ldy U_ToIn
-006AA2  1  5A           	phy			;save start index
-006AA3  1               
-006AA3  1  88           	dey			;span word
-006AA4  1  B5 02        @22:	lda 2,x			; load delimiter
-006AA6  1  C8           @21:	iny			;  step to next char
-006AA7  1  C4 0A        	cpy U_ParseLen		;  at end-of-string?
-006AA9  1  B0 14        	bcs @28
-006AAB  1  D1 08        	cmp (U_ParseBuf),y	;  delimiter?
-006AAD  1  F0 0A        	beq @Found
-006AAF  1  C9 20        	cmp #' '		; we're searching for whitespace?
-006AB1  1  D0 F3        	bne @21
-006AB3  1  B1 08        	lda (U_ParseBuf),y	; is it whitespace?
-006AB5  1  C9 20        	cmp #' '
-006AB7  1  B0 EB        	bcs @22
+006A96  1  A4 0C        	ldy U_ToIn
+006A98  1  5A           	phy			;save start index
+006A99  1               
+006A99  1  88           	dey			;span word
+006A9A  1  B5 02        @22:	lda 2,x			; load delimiter
+006A9C  1  C8           @21:	iny			;  step to next char
+006A9D  1  C4 0A        	cpy U_ParseLen		;  at end-of-string?
+006A9F  1  B0 14        	bcs @28
+006AA1  1  D1 08        	cmp (U_ParseBuf),y	;  delimiter?
+006AA3  1  F0 0A        	beq @Found
+006AA5  1  C9 20        	cmp #' '		; we're searching for whitespace?
+006AA7  1  D0 F3        	bne @21
+006AA9  1  B1 08        	lda (U_ParseBuf),y	; is it whitespace?
+006AAB  1  C9 20        	cmp #' '
+006AAD  1  B0 EB        	bcs @22
+006AAF  1               
+006AAF  1  C8           @Found:	iny			;  skip delimiter
+006AB0  1  84 0C        	sty U_ToIn
+006AB2  1  88           	dey
+006AB3  1  80 02        	bra @29
+006AB5  1  84 0C        @28:	sty U_ToIn
+006AB7  1               @29:
+006AB7  1  C2 20        	rep #P_M
 006AB9  1               
-006AB9  1  C8           @Found:	iny			;  skip delimiter
-006ABA  1  84 0C        	sty U_ToIn
-006ABC  1  88           	dey
-006ABD  1  80 02        	bra @29
-006ABF  1  84 0C        @28:	sty U_ToIn
-006AC1  1               @29:
-006AC1  1  C2 20        	rep #P_M
-006AC3  1               
-006AC3  1  98           	tya			; calc length
-006AC4  1  38           	sec
-006AC5  1  E3 01        	sbc 1,s
-006AC7  1  95 00        	sta 0,x
-006AC9  1               
-006AC9  1  68           	pla			; calc start addr
-006ACA  1  18           	clc
-006ACB  1  65 08        	adc U_ParseBuf
-006ACD  1  95 02        	sta 2,x
-006ACF  1               
-006ACF  1  60           	rts
-006AD0  1               
-006AD0  1               
-006AD0  1  50 61 72 73   Header "Parse-Name",0 ; (  (spaces)name(space)  -- c-addr u )  Skip leading spaces. Parse space delimited name.
-006AD4  1  65 2D 4E 61  
-006AD8  1  6D 65 0A 94  
-006ADC  1  6A           
-006ADD  1                 ; https://forth-standard.org/standard/core/PARSE-NAME
-006ADD  1                 ; c-addr is the address of the selected string within the input buffer and u is its length in
-006ADD  1                 ; characters. If the parse area is empty or contains only white space, the resulting string
-006ADD  1                 ; has length zero.
-006ADD  1               Parse_Name:
-006ADD  1  20 E6 6A     	jsr SkipWhite		;skip leading whitespace
-006AE0  1  A9 20 00     	lda #' '
-006AE3  1  20 99 6A     	jsr ParseA		;get the name
-006AE6  1               ;	bra SkipWhite		;skip trailing whitespace
-006AE6  1               
-006AE6  1               
-006AE6  1               ; Header "SkipWhite",0 ; ( -- ) skip whitespace on source
-006AE6  1               SkipWhite:
-006AE6  1  E2 20        	sep #P_M
-006AE8  1  A4 0C        	ldy U_ToIn
-006AEA  1  88           	dey
-006AEB  1  C8           @11:	iny
-006AEC  1  C4 0A        	cpy U_ParseLen
-006AEE  1  B0 06        	bcs @19
-006AF0  1  B1 08        	lda (U_ParseBuf),y
-006AF2  1  C9 21        	cmp #' '+1
-006AF4  1  90 F5        	bcc @11
-006AF6  1  84 0C        @19:	sty U_ToIn
-006AF8  1  C2 20        	rep #P_M
-006AFA  1  60           	rts
-006AFB  1               
-006AFB  1               
-006AFB  1  4E 75 6D 62   Header "Number",0 ; ( adr len -- 0 ) or ( adr len -- n -1 ) or ( adr len -- d -2 ) or ( adr len -- fp -3 )
-006AFF  1  65 72 06 DD  
-006B03  1  6A           
-006B04  1                 ; Converts the text beginning at adr for len, with regard to Base, to a binary
-006B04  1                 ; value that is single-length if no valid punctuation occurs, and
-006B04  1                 ; double-length if valid punctuation does occur.  The string may contain
-006B04  1                 ; a preceding negative sign.
-006B04  1  64 0E        Number:	stz W		; Accumulator= 0
-006B06  1  64 10        	stz Temp0	; negative sign flag
-006B08  1               
-006B08  1  20 62 6B     	jsr @Get	; get next char
-006B0B  1  30 50        	bmi @num_err
-006B0D  1  C9 2B 00     	cmp #'+'	;  plus sign?
-006B10  1  F0 07        	beq @loop
-006B12  1  C9 2D 00     	cmp #'-'	;  minus sign?
-006B15  1  D0 07        	bne @2
-006B17  1  C6 10        	dec Temp0	;  set sign flag
-006B19  1               
-006B19  1  20 62 6B     @loop:	jsr @Get	; get next char
-006B1C  1  30 2D        	bmi @done
-006B1E  1               @2:
-006B1E  1  38           	sec		; get ASCII digit value
-006B1F  1  E9 30 00     	sbc #'0'
-006B22  1  90 39        	bcc @num_err
-006B24  1  C9 0A 00     	CMP #10
-006B27  1  90 0B        	bcc @ok
-006B29  1  E9 07 00     	sbc #7
-006B2C  1  29 DF 00     	and #$df
-006B2F  1  C9 0A 00     	CMP #10
-006B32  1  90 29        	bcc @num_err
-006B34  1  C5 00        @ok:	CMP U_Base
-006B36  1  B0 25        	bcs @num_err
-006B38  1               
-006B38  1  85 12        	sta Temp2	; WB = W * BASE + digit
-006B3A  1  A4 00        	ldy U_Base
-006B3C  1  A9 00 00     	lda #0
-006B3F  1  18           @mul2:	clc
-006B40  1  65 0E        	adc W
-006B42  1  88           	dey
-006B43  1  D0 FA        	bne @mul2
-006B45  1  65 12        	adc Temp2
-006B47  1  85 0E        	sta W
-006B49  1  80 CE        	bra @loop
-006B4B  1               
-006B4B  1  A5 0E        @done:	LDA W
-006B4D  1  24 10        	bit Temp0	; get sign flag
-006B4F  1  10 04        	bpl @d4
-006B51  1  49 FF FF     	eor #$ffff	;  negate
-006B54  1  1A           	ina
-006B55  1               @d4:
-006B55  1  95 02        	sta 2,x		; Replace addr with number
-006B57  1  A9 FF FF     	lda #.loword(-1) ; Success
-006B5A  1  95 00        	sta 0,x
-006B5C  1  60           	rts
-006B5D  1               
-006B5D  1               @num_err:
-006B5D  1  74 02        	stz 2,x		; return fail
-006B5F  1  E8           	inx		; Drop len
-006B60  1  E8           	inx
-006B61  1  60           	rts
-006B62  1               
-006B62  1               @Get: ; get next char
-006B62  1  D6 00        	dec 0,x		; more chars?
-006B64  1  30 07        	bmi @9
-006B66  1  A1 02        	lda (2,x)	; get char
-006B68  1  F6 02        	inc 2,x
-006B6A  1  29 FF 00     	and #$ff
-006B6D  1  60           @9:	rts
-006B6E  1               
-006B6E  1               ;==============================================================================
-006B6E  1               ; SECTION 12: SYSTEM WORDS (QUIT, ABORT)
-006B6E  1               
-006B6E  1               
-006B6E  1  42 79 65 03   Header "Bye",0 ; ( -- ) halt the system
-006B72  1  04 6B        
-006B74  1                 ; https://forth-standard.org/standard/tools/BYE
-006B74  1  4C 84 E0     Bye:	jmp $00e084	; Mensch Reset
-006B77  1               
-006B77  1               
-006B77  1  41 62 6F 72   Header "Abort",0 ; ( -- ) reset stacks and go to QUIT
-006B7B  1  74 05 74 6B  
-006B7F  1                 ; https://forth-standard.org/standard/core/ABORT
-006B7F  1  20 2F 60     Abort:	jsr PSP_Reset	; reset parm stack
-006B82  1  20 47 69     	jsr DotQuoteRun
-006B85  1  05 00        	.word 5
-006B87  1  3F 00 20     	.byte "?",0," " ; this phrase makes the simulator stop copying from an input file
-006B8A  1  0D 0A        	.byte $0d,$0a
-006B8C  1  80 07        	bra Quit
-006B8E  1               
-006B8E  1               
-006B8E  1  51 75 69 74   Header "Quit", 0 ; ( -- ) outer interpreter loop
-006B92  1  04 7F 6B     
-006B95  1                 ; Resets return stack, reads and interprets input forever
-006B95  1                 ; https://forth-standard.org/standard/core/QUIT
-006B95  1  A9 97 04     Quit:	lda #RSP_INIT			; Reset return stack
-006B98  1  1B           	tcs
-006B99  1  64 02        	stz U_State			; STATE= interpret
-006B9B  1               
-006B9B  1  A9 00 03     @Loop:	lda #TIB_Base			; Use terminal buffer
-006B9E  1  85 08        	sta U_ParseBuf
-006BA0  1  A0 FE 00     	ldy #TIB_SIZE			; push buf length
-006BA3  1  20 AC 60     	jsr PushYA
-006BA6  1  20 FB 64     	jsr Accept			; Read line
-006BA9  1  B5 00        	lda 0,x
-006BAB  1  E8           	inx
-006BAC  1  E8           	inx
-006BAD  1  85 0A        	sta U_ParseLen			; save line size
-006BAF  1  20 C1 64     	jsr Space			; type a space after the line
-006BB2  1  64 0C        	stz U_ToIn			; init parse offset
-006BB4  1  20 D3 6B     	jsr Interpret			; Interpret the input line
-006BB7  1  A5 02        	lda U_State			; STATE == 0 (interpret mode)?
-006BB9  1  D0 E0        	bne @Loop			; Loop back (compiling: no prompt)
-006BBB  1  20 47 69     	jsr DotQuoteRun
-006BBE  1  05 00        	.word 5				; Print " ok"
-006BC0  1  20 6F 6B 0D  	.byte " ok",$0d,$0a
-006BC4  1  0A           
-006BC5  1  80 D4        	bra @Loop
-006BC7  1               
-006BC7  1               
-006BC7  1  49 6E 74 65   Header "Interpret",0 ; ( -- ) parse and execute/compile words from input
-006BCB  1  72 70 72 65  
-006BCF  1  74 09 95 6B  
-006BD3  1               Interpret:
-006BD3  1               @next_word:
-006BD3  1  20 DD 6A     	jsr Parse_Name		; Parse next space-delimited word
-006BD6  1  B5 00        	lda 0,x
-006BD8  1  F0 66        	beq @done		; no more words in source?
-006BDA  1               
-006BDA  1  20 A8 60     	jsr TwoDup		; ( caddr len caddr len )
-006BDD  1  A5 06        	lda U_Latest		; search for the word in dictionary
-006BDF  1  20 3B 60     	jsr PushA
-006BE2  1  20 32 68     	jsr Search_WordList	; ( addr len wid -- 0 | xt 1 | xt -1 )
-006BE5  1  B5 00        	lda 0,x
-006BE7  1  F0 1D        	beq @not_found		; result: 0=not found, 1=normal, -1=immediate
-006BE9  1  30 0E        	bmi @exec_word
-006BEB  1               
-006BEB  1  A5 02        	lda U_State
-006BED  1  F0 0A        	beq @exec_word
+006AB9  1  98           	tya			; calc length
+006ABA  1  38           	sec
+006ABB  1  E3 01        	sbc 1,s
+006ABD  1  95 00        	sta 0,x
+006ABF  1               
+006ABF  1  68           	pla			; calc start addr
+006AC0  1  18           	clc
+006AC1  1  65 08        	adc U_ParseBuf
+006AC3  1  95 02        	sta 2,x
+006AC5  1               
+006AC5  1  60           	rts
+006AC6  1               
+006AC6  1               
+006AC6  1  50 61 72 73   Header "Parse-Name",0 ; (  (spaces)name(space)  -- c-addr u )  Skip leading spaces. Parse space delimited name.
+006ACA  1  65 2D 4E 61  
+006ACE  1  6D 65 0A 8A  
+006AD2  1  6A           
+006AD3  1                 ; https://forth-standard.org/standard/core/PARSE-NAME
+006AD3  1                 ; c-addr is the address of the selected string within the input buffer and u is its length in
+006AD3  1                 ; characters. If the parse area is empty or contains only white space, the resulting string
+006AD3  1                 ; has length zero.
+006AD3  1               Parse_Name:
+006AD3  1  20 DC 6A     	jsr SkipWhite		;skip leading whitespace
+006AD6  1  A9 20 00     	lda #' '
+006AD9  1  20 8F 6A     	jsr ParseA		;get the name
+006ADC  1               ;	bra SkipWhite		;skip trailing whitespace
+006ADC  1               
+006ADC  1               
+006ADC  1               ; Header "SkipWhite",0 ; ( -- ) skip whitespace on source
+006ADC  1               SkipWhite:
+006ADC  1  E2 20        	sep #P_M
+006ADE  1  A4 0C        	ldy U_ToIn
+006AE0  1  88           	dey
+006AE1  1  C8           @11:	iny
+006AE2  1  C4 0A        	cpy U_ParseLen
+006AE4  1  B0 06        	bcs @19
+006AE6  1  B1 08        	lda (U_ParseBuf),y
+006AE8  1  C9 21        	cmp #' '+1
+006AEA  1  90 F5        	bcc @11
+006AEC  1  84 0C        @19:	sty U_ToIn
+006AEE  1  C2 20        	rep #P_M
+006AF0  1  60           	rts
+006AF1  1               
+006AF1  1               
+006AF1  1  4E 75 6D 62   Header "Number",0 ; ( adr len -- 0 ) or ( adr len -- n -1 ) or ( adr len -- d -2 ) or ( adr len -- fp -3 )
+006AF5  1  65 72 06 D3  
+006AF9  1  6A           
+006AFA  1                 ; Converts the text beginning at adr for len, with regard to Base, to a binary
+006AFA  1                 ; value that is single-length if no valid punctuation occurs, and
+006AFA  1                 ; double-length if valid punctuation does occur.  The string may contain
+006AFA  1                 ; a preceding negative sign.
+006AFA  1  64 0E        Number:	stz W		; Accumulator= 0
+006AFC  1  64 10        	stz Temp0	; negative sign flag
+006AFE  1               
+006AFE  1  20 58 6B     	jsr @Get	; get next char
+006B01  1  30 50        	bmi @num_err
+006B03  1  C9 2B 00     	cmp #'+'	;  plus sign?
+006B06  1  F0 07        	beq @loop
+006B08  1  C9 2D 00     	cmp #'-'	;  minus sign?
+006B0B  1  D0 07        	bne @2
+006B0D  1  C6 10        	dec Temp0	;  set sign flag
+006B0F  1               
+006B0F  1  20 58 6B     @loop:	jsr @Get	; get next char
+006B12  1  30 2D        	bmi @done
+006B14  1               @2:
+006B14  1  38           	sec		; get ASCII digit value
+006B15  1  E9 30 00     	sbc #'0'
+006B18  1  90 39        	bcc @num_err
+006B1A  1  C9 0A 00     	CMP #10
+006B1D  1  90 0B        	bcc @ok
+006B1F  1  E9 07 00     	sbc #7
+006B22  1  29 DF 00     	and #$df
+006B25  1  C9 0A 00     	CMP #10
+006B28  1  90 29        	bcc @num_err
+006B2A  1  C5 00        @ok:	CMP U_Base
+006B2C  1  B0 25        	bcs @num_err
+006B2E  1               
+006B2E  1  85 12        	sta Temp2	; WB = W * BASE + digit
+006B30  1  A4 00        	ldy U_Base
+006B32  1  A9 00 00     	lda #0
+006B35  1  18           @mul2:	clc
+006B36  1  65 0E        	adc W
+006B38  1  88           	dey
+006B39  1  D0 FA        	bne @mul2
+006B3B  1  65 12        	adc Temp2
+006B3D  1  85 0E        	sta W
+006B3F  1  80 CE        	bra @loop
+006B41  1               
+006B41  1  A5 0E        @done:	LDA W
+006B43  1  24 10        	bit Temp0	; get sign flag
+006B45  1  10 04        	bpl @d4
+006B47  1  49 FF FF     	eor #$ffff	;  negate
+006B4A  1  1A           	ina
+006B4B  1               @d4:
+006B4B  1  95 02        	sta 2,x		; Replace addr with number
+006B4D  1  A9 FF FF     	lda #.loword(-1) ; Success
+006B50  1  95 00        	sta 0,x
+006B52  1  60           	rts
+006B53  1               
+006B53  1               @num_err:
+006B53  1  74 02        	stz 2,x		; return fail
+006B55  1  E8           	inx		; Drop len
+006B56  1  E8           	inx
+006B57  1  60           	rts
+006B58  1               
+006B58  1               @Get: ; get next char
+006B58  1  D6 00        	dec 0,x		; more chars?
+006B5A  1  30 07        	bmi @9
+006B5C  1  A1 02        	lda (2,x)	; get char
+006B5E  1  F6 02        	inc 2,x
+006B60  1  29 FF 00     	and #$ff
+006B63  1  60           @9:	rts
+006B64  1               
+006B64  1               ;==============================================================================
+006B64  1               ; SECTION 12: SYSTEM WORDS (QUIT, ABORT)
+006B64  1               
+006B64  1               
+006B64  1  42 79 65 03   Header "Bye",0 ; ( -- ) halt the system
+006B68  1  FA 6A        
+006B6A  1                 ; https://forth-standard.org/standard/tools/BYE
+006B6A  1  4C 84 E0     Bye:	jmp $00e084	; Mensch Reset
+006B6D  1               
+006B6D  1               
+006B6D  1  41 62 6F 72   Header "Abort",0 ; ( -- ) reset stacks and go to QUIT
+006B71  1  74 05 6A 6B  
+006B75  1                 ; https://forth-standard.org/standard/core/ABORT
+006B75  1  20 2F 60     Abort:	jsr PSP_Reset	; reset parm stack
+006B78  1  20 3D 69     	jsr DotQuoteRun
+006B7B  1  05 00        	.word 5
+006B7D  1  3F 00 20     	.byte "?",0," " ; this phrase makes the simulator stop copying from an input file
+006B80  1  0D 0A        	.byte $0d,$0a
+006B82  1  80 07        	bra Quit
+006B84  1               
+006B84  1               
+006B84  1  51 75 69 74   Header "Quit", 0 ; ( -- ) outer interpreter loop
+006B88  1  04 75 6B     
+006B8B  1                 ; Resets return stack, reads and interprets input forever
+006B8B  1                 ; https://forth-standard.org/standard/core/QUIT
+006B8B  1  A9 97 04     Quit:	lda #RSP_INIT			; Reset return stack
+006B8E  1  1B           	tcs
+006B8F  1  64 02        	stz U_State			; STATE= interpret
+006B91  1               
+006B91  1  A9 00 03     @Loop:	lda #TIB_Base			; Use terminal buffer
+006B94  1  85 08        	sta U_ParseBuf
+006B96  1  A0 FE 00     	ldy #TIB_SIZE			; push buf length
+006B99  1  20 AC 60     	jsr PushYA
+006B9C  1  20 FB 64     	jsr Accept			; Read line
+006B9F  1  B5 00        	lda 0,x
+006BA1  1  E8           	inx
+006BA2  1  E8           	inx
+006BA3  1  85 0A        	sta U_ParseLen			; save line size
+006BA5  1  20 C1 64     	jsr Space			; type a space after the line
+006BA8  1  64 0C        	stz U_ToIn			; init parse offset
+006BAA  1  20 C9 6B     	jsr Interpret			; Interpret the input line
+006BAD  1  A5 02        	lda U_State			; STATE == 0 (interpret mode)?
+006BAF  1  D0 E0        	bne @Loop			; Loop back (compiling: no prompt)
+006BB1  1  20 3D 69     	jsr DotQuoteRun
+006BB4  1  05 00        	.word 5				; Print " ok"
+006BB6  1  20 6F 6B 0D  	.byte " ok",$0d,$0a
+006BBA  1  0A           
+006BBB  1  80 D4        	bra @Loop
+006BBD  1               
+006BBD  1               
+006BBD  1  49 6E 74 65   Header "Interpret",0 ; ( -- ) parse and execute/compile words from input
+006BC1  1  72 70 72 65  
+006BC5  1  74 09 8B 6B  
+006BC9  1               Interpret:
+006BC9  1               @next_word:
+006BC9  1  20 D3 6A     	jsr Parse_Name		; Parse next space-delimited word
+006BCC  1  B5 00        	lda 0,x
+006BCE  1  F0 66        	beq @done		; no more words in source?
+006BD0  1               
+006BD0  1  20 A8 60     	jsr TwoDup		; ( caddr len caddr len )
+006BD3  1  A5 06        	lda U_Latest		; search for the word in dictionary
+006BD5  1  20 3B 60     	jsr PushA
+006BD8  1  20 28 68     	jsr Search_WordList	; ( addr len wid -- 0 | xt 1 | xt -1 )
+006BDB  1  B5 00        	lda 0,x
+006BDD  1  F0 1D        	beq @not_found		; result: 0=not found, 1=normal, -1=immediate
+006BDF  1  30 0E        	bmi @exec_word
+006BE1  1               
+006BE1  1  A5 02        	lda U_State
+006BE3  1  F0 0A        	beq @exec_word
+006BE5  1               
+006BE5  1               	; Compile the word: , the xt
+006BE5  1  E8           	inx			; drop flag
+006BE6  1  E8           	inx
+006BE7  1  20 4F 67     	jsr CompileComma
+006BEA  1  20 99 60     	jsr TwoDrop		; 2Drop extra string
+006BED  1  80 DA        	bra @next_word
 006BEF  1               
-006BEF  1               	; Compile the word: , the xt
+006BEF  1               @exec_word: ; Execute: load xt, jump through code field
 006BEF  1  E8           	inx			; drop flag
 006BF0  1  E8           	inx
-006BF1  1  20 59 67     	jsr CompileComma
-006BF4  1  20 99 60     	jsr TwoDrop		; 2Drop extra string
-006BF7  1  80 DA        	bra @next_word
-006BF9  1               
-006BF9  1               @exec_word: ; Execute: load xt, jump through code field
-006BF9  1  E8           	inx			; drop flag
-006BFA  1  E8           	inx
-006BFB  1  20 7E 60     	jsr Nip
-006BFE  1  20 7E 60     	jsr Nip			; discard extra string copy
-006C01  1  20 D6 65     	jsr Execute		; run the xt
-006C04  1  80 CD        	bra @next_word
-006C06  1               
-006C06  1               @not_found:
-006C06  1  E8           	inx			; Drop search result
-006C07  1  E8           	inx
-006C08  1  20 A8 60     	jsr TwoDup		; ( caddr len caddr len )
-006C0B  1  20 04 6B     	jsr Number		; Try to convert as number
-006C0E  1  B5 00        	lda 0,x
-006C10  1  F0 16        	beq @Err		; ( adr len -- 0 ) or ( adr len -- n -1 ) or ( adr len -- d -2 )
-006C12  1  E8           	inx
-006C13  1  E8           	inx
-006C14  1  A5 02        	lda U_State
-006C16  1  F0 08        	beq @nf9
-006C18  1  20 92 67     	jsr Literal		; compile n
-006C1B  1  20 99 60     	jsr TwoDrop		; 2Drop string
-006C1E  1  80 B3        	bra @next_word
-006C20  1               
-006C20  1  20 7E 60     @nf9:	jsr Nip
-006C23  1  20 7E 60     	jsr Nip			; discard string, keep n
-006C26  1  80 AB        	bra @next_word
-006C28  1               
-006C28  1  E8           @Err:	inx			; number flag
-006C29  1  E8           	inx
-006C2A  1  20 E2 64     	jsr Type		; string
-006C2D  1  20 47 69     	jsr DotQuoteRun
-006C30  1  0B 00        	.word 11
-006C32  1  20 6E 6F 74  	.byte " not found "
-006C36  1  20 66 6F 75  
-006C3A  1  6E 64 20     
-006C3D  1  20 7F 6B     	jsr Abort
+006BF1  1  20 7E 60     	jsr Nip
+006BF4  1  20 7E 60     	jsr Nip			; discard extra string copy
+006BF7  1  20 D6 65     	jsr Execute		; run the xt
+006BFA  1  80 CD        	bra @next_word
+006BFC  1               
+006BFC  1               @not_found:
+006BFC  1  E8           	inx			; Drop search result
+006BFD  1  E8           	inx
+006BFE  1  20 A8 60     	jsr TwoDup		; ( caddr len caddr len )
+006C01  1  20 FA 6A     	jsr Number		; Try to convert as number
+006C04  1  B5 00        	lda 0,x
+006C06  1  F0 16        	beq @Err		; ( adr len -- 0 ) or ( adr len -- n -1 ) or ( adr len -- d -2 )
+006C08  1  E8           	inx
+006C09  1  E8           	inx
+006C0A  1  A5 02        	lda U_State
+006C0C  1  F0 08        	beq @nf9
+006C0E  1  20 88 67     	jsr Literal		; compile n
+006C11  1  20 99 60     	jsr TwoDrop		; 2Drop string
+006C14  1  80 B3        	bra @next_word
+006C16  1               
+006C16  1  20 7E 60     @nf9:	jsr Nip
+006C19  1  20 7E 60     	jsr Nip			; discard string, keep n
+006C1C  1  80 AB        	bra @next_word
+006C1E  1               
+006C1E  1  E8           @Err:	inx			; number flag
+006C1F  1  E8           	inx
+006C20  1  20 E2 64     	jsr Type		; string
+006C23  1  20 3D 69     	jsr DotQuoteRun
+006C26  1  0B 00        	.word 11
+006C28  1  20 6E 6F 74  	.byte " not found "
+006C2C  1  20 66 6F 75  
+006C30  1  6E 64 20     
+006C33  1  20 75 6B     	jsr Abort
+006C36  1               
+006C36  1  4C 99 60     @done:	jmp TwoDrop		; discard empty parse string
+006C39  1               
+006C39  1               
+006C39  1  5B 81 C9 6B   Header "[",F_Immediate ; ( -- )  switch State to interpret
+006C3D  1                 ; https://forth-standard.org/standard/core/Bracket
+006C3D  1               OpenBracket:
+006C3D  1  64 02        	stz U_State
+006C3F  1  60           	rts
 006C40  1               
-006C40  1  4C 99 60     @done:	jmp TwoDrop		; discard empty parse string
-006C43  1               
-006C43  1               
-006C43  1  5B 81 D3 6B   Header "[",F_Immediate ; ( -- )  switch State to interpret
-006C47  1                 ; https://forth-standard.org/standard/core/Bracket
-006C47  1               OpenBracket:
-006C47  1  64 02        	stz U_State
-006C49  1  60           	rts
-006C4A  1               
-006C4A  1               
-006C4A  1  5D 01 47 6C   Header "]",0 ; ( -- )  switch State to compile
-006C4E  1                ; https://forth-standard.org/standard/right-bracket
-006C4E  1               CloseBracket:
-006C4E  1  86 02        	stx U_State	; set to non-zero
-006C50  1  60           	rts
-006C51  1               
-006C51  1               
-006C51  1  3A 01 4E 6C   Header ":", 0 ; ( "name" -- )  start compiling a new colon word
-006C55  1                 ; https://forth-standard.org/standard/core/Colon
-006C55  1  20 DD 6A     Colon:	jsr Parse_Name	; get name  ( caddr len )
-006C58  1  20 B7 67     	jsr HeaderComma
+006C40  1               
+006C40  1  5D 01 3D 6C   Header "]",0 ; ( -- )  switch State to compile
+006C44  1                ; https://forth-standard.org/standard/right-bracket
+006C44  1               CloseBracket:
+006C44  1  86 02        	stx U_State	; set to non-zero
+006C46  1  60           	rts
+006C47  1               
+006C47  1               
+006C47  1  3A 01 44 6C   Header ":", 0 ; ( "name" -- )  start compiling a new colon word
+006C4B  1                 ; https://forth-standard.org/standard/core/Colon
+006C4B  1  20 D3 6A     Colon:	jsr Parse_Name	; get name  ( caddr len )
+006C4E  1  20 AD 67     	jsr HeaderComma
+006C51  1               	; smudge
+006C51  1  4C 44 6C     	jmp CloseBracket ; State= compile
+006C54  1               
+006C54  1               
+006C54  1  3B 81 4B 6C   Header ";",F_Immediate ;  finish compiling a new colon word
+006C58  1                 ; https://forth-standard.org/standard/core/Semi
+006C58  1               Semicolon:
+006C58  1  20 E4 65     	jsr Exit		; compile Exit
+006C5B  1               
 006C5B  1               	; smudge
-006C5B  1  4C 4E 6C     	jmp CloseBracket ; State= compile
+006C5B  1               
+006C5B  1  4C 3D 6C     	jmp OpenBracket		; STATE= interpret
 006C5E  1               
 006C5E  1               
-006C5E  1  3B 81 55 6C   Header ";",F_Immediate ;  finish compiling a new colon word
-006C62  1                 ; https://forth-standard.org/standard/core/Semi
-006C62  1               Semicolon:
-006C62  1  20 E4 65     	jsr Exit		; compile Exit
-006C65  1               
-006C65  1               	; smudge
-006C65  1               
-006C65  1  4C 47 6C     	jmp OpenBracket		; STATE= interpret
-006C68  1               
-006C68  1               
-006C68  1  44 75 6D 70   Header "Dump",0 ; ( caddr len -- )  Dump memory in hex
-006C6C  1  04 62 6C     
-006C6F  1  D6 00        Dump:	dec 0,x		; so we stop on zero length remaining
-006C71  1  20 AE 64     @line:	jsr CR
-006C74  1  20 61 60     	jsr Over	; print addr
-006C77  1  20 4B 65     	jsr DotHex
-006C7A  1  A0 10 00     	ldy #16		; for 16 bytes
-006C7D  1  5A           @byte:	phy
-006C7E  1  20 C1 64     	jsr Space	;   print space
-006C81  1  A1 02        	lda (2,x)	;   get byte
-006C83  1  F6 02        	inc 2,x
-006C85  1  D6 00        	dec 0,x
-006C87  1  20 5E 65     	jsr CDotHexA	;   print byte
-006C8A  1  7A           	ply		;  next
-006C8B  1  88           	dey
-006C8C  1  D0 EF        	bne @byte
-006C8E  1  B5 00        	lda 0,x		; until done
-006C90  1  10 DF        	bpl @line
-006C92  1  4C 99 60     	jmp TwoDrop
-006C95  1               
-006C95  1               
-006C95  1  2E 53 02 6F   Header ".S",0 ; ( -- ) print stack contents non-destructively
-006C99  1  6C           
-006C9A  1                 ; https://forth-standard.org/standard/tools/DotS
-006C9A  1  A9 3C 00     DotS:	lda #'<'
-006C9D  1  20 97 64     	jsr EmitA
-006CA0  1  20 E4 60     	jsr Depth
-006CA3  1  20 39 60     	jsr Dup
-006CA6  1  20 BD 65     	jsr Dot
-006CA9  1  A9 3E 00     	lda #'>'
-006CAC  1  20 97 64     	jsr EmitA
-006CAF  1  20 C1 64     	jsr Space
-006CB2  1               
-006CB2  1  B5 00        @loop:	lda 0,x		; while entrys remain
-006CB4  1  F0 0D        	beq @done
-006CB6  1  20 3B 60     	jsr PushA	;   get
-006CB9  1  20 F7 60     	jsr Pick
-006CBC  1  20 BD 65     	jsr Dot		;   print
-006CBF  1  D6 00        	dec 0,x
-006CC1  1  10 EF        	bpl @loop	;  next
-006CC3  1  E8           @done:	inx		; drop n
-006CC4  1  E8           	inx
-006CC5  1  4C AE 64     	jmp CR
-006CC8  1               
-006CC8  1               
-006CC8  1               Last_ROM_Word = DictLink
-006CC8  1               
-006CC8  1               ;======================================================================
-006CC8  1                 .segment "VECTORS" ; 65265 Hardware vectors
+006C5E  1  44 75 6D 70   Header "Dump",0 ; ( caddr len -- )  Dump memory in hex
+006C62  1  04 58 6C     
+006C65  1  D6 00        Dump:	dec 0,x		; so we stop on zero length remaining
+006C67  1  20 AE 64     @line:	jsr CR
+006C6A  1  20 61 60     	jsr Over	; print addr
+006C6D  1  20 4B 65     	jsr DotHex
+006C70  1  A0 10 00     	ldy #16		; for 16 bytes
+006C73  1  5A           @byte:	phy
+006C74  1  20 C1 64     	jsr Space	;   print space
+006C77  1  A1 02        	lda (2,x)	;   get byte
+006C79  1  F6 02        	inc 2,x
+006C7B  1  D6 00        	dec 0,x
+006C7D  1  20 5E 65     	jsr CDotHexA	;   print byte
+006C80  1  7A           	ply		;  next
+006C81  1  88           	dey
+006C82  1  D0 EF        	bne @byte
+006C84  1  B5 00        	lda 0,x		; until done
+006C86  1  10 DF        	bpl @line
+006C88  1  4C 99 60     	jmp TwoDrop
+006C8B  1               
+006C8B  1               
+006C8B  1  2E 53 02 65   Header ".S",0 ; ( -- ) print stack contents non-destructively
+006C8F  1  6C           
+006C90  1                 ; https://forth-standard.org/standard/tools/DotS
+006C90  1  A9 3C 00     DotS:	lda #'<'
+006C93  1  20 97 64     	jsr EmitA
+006C96  1  20 E4 60     	jsr Depth
+006C99  1  20 39 60     	jsr Dup
+006C9C  1  20 BD 65     	jsr Dot
+006C9F  1  A9 3E 00     	lda #'>'
+006CA2  1  20 97 64     	jsr EmitA
+006CA5  1  20 C1 64     	jsr Space
+006CA8  1               
+006CA8  1  B5 00        @loop:	lda 0,x		; while entrys remain
+006CAA  1  F0 0D        	beq @done
+006CAC  1  20 3B 60     	jsr PushA	;   get
+006CAF  1  20 F7 60     	jsr Pick
+006CB2  1  20 BD 65     	jsr Dot		;   print
+006CB5  1  D6 00        	dec 0,x
+006CB7  1  10 EF        	bpl @loop	;  next
+006CB9  1  E8           @done:	inx		; drop n
+006CBA  1  E8           	inx
+006CBB  1  4C AE 64     	jmp CR
+006CBE  1               
+006CBE  1               
+006CBE  1               Last_ROM_Word = DictLink
+006CBE  1               
+006CBE  1               ;======================================================================
+006CBE  1                 .segment "VECTORS" ; 65265 Hardware vectors
 000000r 1               ; This is just for the simulator.
 000000r 1               ; The real hardware has these vectors in the '265 Mensch monitor ROM.
 000000r 1               
