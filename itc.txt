@@ -2269,19 +2269,21 @@ Quit:	.word DoCol	; CFA
 	.word RSP_Reset			; Reset return stack
 	.word Zero,State,Store		; STATE= interpret
 
-@Loop:	.word Lit,TIB_Base		; Use terminal buffer
+@Loop:					; Begin
+	.word Lit,TIB_Base		;   Use terminal buffer
 	.word Dup,ParseBuf,Store
-	.word Lit,TIB_SIZE		; push buf length
-	.word Accept			; Read line
-	.word ParseLen,Store		; save line size
+	.word Lit,TIB_SIZE		;   push buf length
+	.word Accept			;   Read line
+	.word ParseLen,Store		;   save line size
 	.word Space
-	.word Zero,ToIn,Store		; init parse offset
-	.word Interpret			; Interpret the input line
-	.word State,Fetch,ZeroEq	; STATE == 0 (interpret mode)?
-	.word ZBranch,@Loop		; Loop back (compiling: no prompt)
-	.word DotQuoteRun,5		; Print " ok"
-	.byte " ok",$0d,$0a
-	.word Branch,@Loop
+	.word Zero,ToIn,Store		;   init parse offset
+	.word Interpret			;   Interpret the input line
+	.word State,Fetch,ZeroEq	;   if interpreting
+	.word ZBranch,@8
+	.word DotQuoteRun,3		;     Print " ok"
+	.byte " ok"
+@8:	.word CR
+	.word Branch,@Loop		;  Again
 
 
 ; Header "RSP-Reset",0 ; ( -- ) (R: ... -- ) reset the return stack pointer
@@ -2351,6 +2353,22 @@ OpenBracket: .word *+2
 CloseBracket: .word *+2
 	stx U_State	; set to non-zero
 	NEXT
+
+
+ Header "Code",0 ; ( "name" -- )  Start a machine code word
+  ; https://forth-standard.org/standard/tools/CODE
+Code:	.word DoCol
+	.word Colon
+	.word Here,Latest,Fetch,Store	; patch CFA
+	.word OpenBracket	; back to interpret mode
+	.word Exit
+
+
+ Header ";Code",F_Immediate ; ( -- )  End a machine code word
+  ; https://forth-standard.org/standard/tools/SemiCODE
+SemiCode: .word DoCol
+	.word Lit,$4c,CComma,Lit,Next1,Comma  ; jmp Next1
+	.word Exit
 
 
  Header ":", 0 ; ( "name" -- )  start compiling a new colon word

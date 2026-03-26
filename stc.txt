@@ -198,14 +198,14 @@ PushA:	DEX
 	rts
 
 
- Header "Drop", 0 ; ( a -- )
+ Header "Drop",0 ; ( a -- )
   ; https://forth-standard.org/standard/core/DROP
 Drop:	INX
 	INX
 	rts
 
 
- Header "Swap", 0 ; ( a b -- b a )
+ Header "Swap",0 ; ( a b -- b a )
   ; https://forth-standard.org/standard/core/SWAP
 Swap:	lda 0,X		; b (TOS)
 	ldy 2,X		; a (NOS)
@@ -214,13 +214,13 @@ Swap:	lda 0,X		; b (TOS)
 	rts
 
 
- Header "Over", 0 ; ( a b -- a b a )
+ Header "Over",0 ; ( a b -- a b a )
   ; https://forth-standard.org/standard/core/OVER
 Over:	LDA 2,X		; a (NOS)
 	bra PushA	; Push copy of a
 
 
- Header "Rot", 0 ; ( a b c -- b c a )
+ Header "Rot",0 ; ( a b c -- b c a )
   ; https://forth-standard.org/standard/core/ROT
 Rot:	ldy 4,X		; a (bottom)
 	LDA 2,X		; b
@@ -246,7 +246,7 @@ Tuck:	jsr Swap
 	bra PushA
 
 
- Header "2Drop", 0 ; ( a b -- )
+ Header "2Drop",0 ; ( a b -- )
   ; https://forth-standard.org/standard/core/TwoDROP
 TwoDrop:
 	INX
@@ -261,7 +261,7 @@ ThreeDrop:
 	bra TwoDrop	; Drop b a
 
 
- Header "2Dup", 0 ; ( a b -- a b a b )
+ Header "2Dup",0 ; ( a b -- a b a b )
   ; https://forth-standard.org/standard/core/TwoDUP
 TwoDup:	ldy 0,x		; b
 	lda 2,x		; a
@@ -274,14 +274,14 @@ PushYA:	dex
 	rts
 
 
- Header "2Over", 0 ; ( a b c d -- a b c d a b )
+ Header "2Over",0 ; ( a b c d -- a b c d a b )
   ; https://forth-standard.org/standard/core/TwoOVER
 TwoOver: ldy 4,x	; a
 	lda 6,x		; b
 	bra PushYA
 
 
- Header "2Swap", 0 ; ( a b c d -- c d a b )
+ Header "2Swap",0 ; ( a b c d -- c d a b )
   ; https://forth-standard.org/standard/core/TwoSWAP
 TwoSwap:
 	lda 0,x		; swap b & d
@@ -295,7 +295,7 @@ TwoSwap:
 	rts
 
 
- Header "Depth", 0 ; ( -- n ) number of items on parameter stack
+ Header "Depth",0 ; ( -- n ) number of items on parameter stack
   ; https://forth-standard.org/standard/core/DEPTH
 Depth:	stx W		; save PSP
 	lda #PSP_INIT
@@ -321,7 +321,7 @@ Pick:	LDA 0,X		; u
 ; SECTION 2: RETURN STACK
 
 
- Header ">R", 0 ; ( a -- ) (R: -- a )  push to return stack
+ Header ">R",0 ; ( a -- ) (R: -- a )  push to return stack
   ; https://forth-standard.org/standard/core/toR
 ToR:	LDA 0,X		; Pop from parameter stack
 	INX
@@ -332,7 +332,7 @@ ToR:	LDA 0,X		; Pop from parameter stack
 	rts
 
 
- Header "R>", 0 ; ( -- a ) (R: a -- )  pop from return stack
+ Header "R>",0 ; ( -- a ) (R: a -- )  pop from return stack
   ; https://forth-standard.org/standard/core/Rfrom
 RFrom:	ply
 	PLA		; Pop from return stack
@@ -340,7 +340,7 @@ RFrom:	ply
 	jmp PushA	; Push onto parameter stack
 
 
- Header "R@", 0 ; ( -- a ) (R: a -- a )  get a copy of top of return stack
+ Header "R@",0 ; ( -- a ) (R: a -- a )  get a copy of top of return stack
   ; https://forth-standard.org/standard/core/RFetch
 RFetch:	lda 3,s
 	jmp PushA
@@ -349,7 +349,7 @@ RFetch:	lda 3,s
 ; SECTION 3: ARITHMETIC
 
 
- Header "+", 0 ; ( a b -- a+b )
+ Header "+",0 ; ( a b -- a+b )
   ; https://forth-standard.org/standard/core/Plus
 Plus:	LDA 0,X		; pop b
 	INX
@@ -360,7 +360,7 @@ Plus:	LDA 0,X		; pop b
 	rts
 
 
- Header "-", 0 ; ( a b -- a-b )
+ Header "-",0 ; ( a b -- a-b )
   ; https://forth-standard.org/standard/core/Minus
 Minus:	LDA 2,X		; a
 	SEC
@@ -368,7 +368,7 @@ Minus:	LDA 2,X		; a
 	jmp NipA
 
 
- Header "Negate", 0 ; ( n -- -n )
+ Header "Negate",0 ; ( n -- -n )
   ; https://forth-standard.org/standard/core/NEGATE
 Negate: LDA 0,X
 Negat3:	EOR #$FFFF
@@ -432,7 +432,7 @@ Min5:	bmi Max8
 	bra Max9
 
 
- Header "1+", 0 ; ( n -- n+1 )
+ Header "1+",0 ; ( n -- n+1 )
   ; https://forth-standard.org/standard/core/OnePlus
 OnePlus:
 	INC 0,X
@@ -444,21 +444,21 @@ TwoPlus: inc 0,x
 	bra OnePlus
 
 
- Header "1-", 0 ; ( n -- n-1 )
+ Header "1-",0 ; ( n -- n-1 )
   ; https://forth-standard.org/standard/core/OneMinus
 OneMinus:
 	DEC 0,X
 	rts
 
 
- Header "2*", 0 ; ( n -- n*2 )  shift left
+ Header "2*",0 ; ( n -- n*2 )  shift left
   ; https://forth-standard.org/standard/core/TwoTimes
 TwoStar:
 	ASL 0,X
 	rts
 
 
- Header "2/", 0 ; ( n -- n/2 ) signed shift right
+ Header "2/",0 ; ( n -- n/2 ) signed shift right
   ; https://forth-standard.org/standard/core/TwoDiv
 TwoSlash:
 	LDA 0,X
@@ -473,7 +473,7 @@ UTwoSlash:
 	rts
 
 
- Header "LShift", 0 ; ( a u -- a<<u ) logical shift left
+ Header "LShift",0 ; ( a u -- a<<u ) logical shift left
   ; https://forth-standard.org/standard/core/LSHIFT
 LShift:	ldy 0,x		; get u (shift count)
 	beq @done
@@ -485,7 +485,7 @@ LShift:	ldy 0,x		; get u (shift count)
 	rts
 
 
- Header "RShift", 0 ; ( a u -- a>>u ) logical shift right
+ Header "RShift",0 ; ( a u -- a>>u ) logical shift right
   ; https://forth-standard.org/standard/core/RSHIFT
 RShift:	ldy 0,x		; get u (shift count)
 	beq @done
@@ -515,7 +515,7 @@ SToD:	lda 0,x		; get n
 @3:	jmp PushA
 
 
- Header "UM*", 0 ; ( u1 u2 -- ud ) unsigned 16x16 -> 32-bit result
+ Header "UM*",0 ; ( u1 u2 -- ud ) unsigned 16x16 -> 32-bit result
   ; Result: TOS = high cell, NOS = low cell
   ; https://forth-standard.org/standard/core/UMTimes
 UMStar: lda #0		; Clear result.hi
@@ -548,7 +548,7 @@ MStar:	lda 0,x		; save result sign
 @9:	rts
 
 
- Header "*", 0 ; ( a b -- a*b ) 16x16 -> 16 (low word)
+ Header "*",0 ; ( a b -- a*b ) 16x16 -> 16 (low word)
   ; https://forth-standard.org/standard/core/Times
 Star:	jsr UMStar
 	inx		; drop hi word
@@ -556,7 +556,7 @@ Star:	jsr UMStar
 	rts
 
 
- Header "UM/MOD", 0 ; ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
+ Header "UM/MOD",0 ; ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
   ; Stack: NOS_HI=ud_high NOS=ud_low TOS=u (divisor)
   ; Quotient overflow gives strange results.
   ; This is a standard 32/16 non-restoring division
@@ -615,7 +615,7 @@ SMSRem:	jsr ToR		; save divisor
 	rts
 
 
- Header "/MOD", 0 ; ( n1 n2 -- rem quot ) signed division
+ Header "/MOD",0 ; ( n1 n2 -- rem quot ) signed division
   ; Divide n1 by n2, giving the single-cell remainder n3 and the single-cell quotient n4. An
   ; ambiguous condition exists if n2 is zero. If n1 and n2 differ in sign, the implementation defined
   ; result returned will be the same as that returned by either the phrase >R S>D R>
@@ -628,13 +628,13 @@ SlashMod:
 	bra SMSRem
 
 
- Header "/", 0 ; ( n1 n2 -- quot ) signed division
+ Header "/",0 ; ( n1 n2 -- quot ) signed division
   ; https://forth-standard.org/standard/core/Div
 Slash:	jsr SlashMod
 	jmp Nip		; remainder
 
 
- Header "Mod", 0 ; ( n1 n2 -- rem ) signed remainder
+ Header "Mod",0 ; ( n1 n2 -- rem ) signed remainder
   ; https://forth-standard.org/standard/core/MOD
 Mod:	jsr SlashMod
 	inx		; Drop quotient
@@ -673,7 +673,7 @@ ZeroGt:
 	bra False1
 
 
- Header "=", 0 ; ( a b -- flag )
+ Header "=",0 ; ( a b -- flag )
   ; https://forth-standard.org/standard/core/Equal
 Equal:	LDA 0,X
 	CMP 2,X
@@ -684,7 +684,7 @@ False2:	INX		; Drop
 	rts
 
 
- Header "<>", 0 ; ( a b -- flag )
+ Header "<>",0 ; ( a b -- flag )
   ; https://forth-standard.org/standard/core/ne
 NotEqual:
 	LDA 0,X
@@ -791,7 +791,7 @@ Fetch:
 	rts
 
 
- Header "!", 0 ; ( val addr -- ) store cell
+ Header "!",0 ; ( val addr -- ) store cell
   ; https://forth-standard.org/standard/core/Store
 Store:
 	lda 2,x		; get val
@@ -799,7 +799,7 @@ Store:
 	jmp TwoDrop	; drop addr val
 
 
- Header "C@", 0 ; ( addr -- byte ) fetch byte
+ Header "C@",0 ; ( addr -- byte ) fetch byte
   ; https://forth-standard.org/standard/core/CFetch
 CFetch:
 	sep #P_M
@@ -810,7 +810,7 @@ CFetch:
 	rts
 
 
- Header "C!", 0 ; ( byte addr -- ) store byte
+ Header "C!",0 ; ( byte addr -- ) store byte
   ; https://forth-standard.org/standard/core/CStore
 CStore:
 	LDA 2,X		; get byte
@@ -820,7 +820,7 @@ CStore:
 	jmp TwoDrop	; drop addr byte, NEXT
 
 
- Header "2@", 0 ; ( addr -- d ) fetch double cell
+ Header "2@",0 ; ( addr -- d ) fetch double cell
   ; (hi cell at addr, lo cell at addr+2, cells stored little-endian)
   ; https://forth-standard.org/standard/core/TwoFetch
 TwoFetch:
@@ -831,7 +831,7 @@ TwoFetch:
 	jmp PushA
 
 
- Header "2!", 0 ; ( d addr -- ) store double cell
+ Header "2!",0 ; ( d addr -- ) store double cell
   ; https://forth-standard.org/standard/core/TwoStore
 TwoStore:
 	ldy 0,x		; addr
@@ -850,7 +850,7 @@ TwoStore:
   ; https://forth-standard.org/standard/tools/q
 
 
- Header "CMove", 0 ; ( src dst u -- ) copy u bytes from src to dst ascending
+ Header "CMove",0 ; ( src dst u -- ) copy u bytes from src to dst ascending
   ; https://forth-standard.org/standard/string/CMOVE
 CMove:
 	lda 0,x		; u (byte count)
@@ -866,7 +866,7 @@ CMove:
 @9:	jmp ThreeDrop	; Drop u dst src
 
 
- Header "Fill", 0 ; ( caddr u byte -- ) fill u bytes starting at addr with byte
+ Header "Fill",0 ; ( caddr u byte -- ) fill u bytes starting at addr with byte
   ; https://forth-standard.org/standard/core/FILL
 Fill:
 	ldy 2,x		; get u
@@ -1083,7 +1083,7 @@ Accept:	lda 2,x		; save addr
 	rts
 
 
- Header ".Hex", 0 ; ( n -- ) Print TOS as hex
+ Header ".Hex",0 ; ( n -- ) Print TOS as hex
 DotHex:	lda 1,x		; do hi byte
 	jsr CDotHexA
 	bra CDotHex	; do lo byte
@@ -1157,7 +1157,7 @@ print_udec: ; subroutine: Print A as unsigned number
 	rts
 
 
- Header ".", 0 ; ( n -- ) print signed number
+ Header ".",0 ; ( n -- ) print signed number
   ; https://forth-standard.org/standard/core/d
 Dot:	lda 0,x		; negative?
 	bpl @4
@@ -2085,7 +2085,7 @@ Abort:	jsr PSP_Reset	; reset parm stack
 	bra Quit
 
 
- Header "Quit", 0 ; ( -- ) outer interpreter loop
+ Header "Quit",0 ; ( -- ) outer interpreter loop
   ; Resets return stack, reads and interprets input forever
   ; https://forth-standard.org/standard/core/QUIT
 Quit:	lda #RSP_INIT			; Reset return stack
@@ -2105,10 +2105,11 @@ Quit:	lda #RSP_INIT			; Reset return stack
 	stz U_ToIn			; init parse offset
 	jsr Interpret			; Interpret the input line
 	lda U_State			; STATE == 0 (interpret mode)?
-	bne @Loop			; Loop back (compiling: no prompt)
+	bne @8				; Loop back (compiling: no prompt)
 	jsr DotQuoteRun
-	.word 5				; Print " ok"
-	.byte " ok",$0d,$0a
+	.word 3				; Print " ok"
+	.byte " ok"
+@8:	jsr CR
 	bra @Loop
 
 
@@ -2189,7 +2190,18 @@ CloseBracket:
 	rts
 
 
- Header ":", 0 ; ( "name" -- )  start compiling a new colon word
+ Header "Code",0 ; ( "name" -- )  Start a machine code word
+  ; https://forth-standard.org/standard/tools/CODE
+Code:	jsr Colon
+	jmp OpenBracket	; back to interpret mode
+
+
+ Header ";Code",F_Immediate ; ( -- )  End a machine code word
+  ; https://forth-standard.org/standard/tools/SemiCODE
+SemiCode: jmp Exit	; compile rts
+
+
+ Header ":",0 ; ( "name" -- )  start compiling a new colon word
   ; https://forth-standard.org/standard/core/Colon
 Colon:	jsr Parse_Name	; get name  ( caddr len )
 	jsr HeaderComma

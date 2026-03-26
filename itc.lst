@@ -286,7 +286,7 @@ Current file: itc.txt
 006018  1  A9 9A 04     	lda #Dict_Base	; User area: DP = Dict_Base
 00601B  1  85 04        	sta U_DP
 00601D  1               
-00601D  1  A9 29 6F     	lda #Last_ROM_Word ; User area: LATEST = last ROM word
+00601D  1  A9 58 6F     	lda #Last_ROM_Word ; User area: LATEST = last ROM word
 006020  1  85 06        	sta U_Latest
 006022  1               
 006022  1               ;	lda #'R'	;???debug
@@ -2576,23 +2576,24 @@ Current file: itc.txt
 006DE3  1  40 60 3E 6C  	.word Zero,State,Store		; STATE= interpret
 006DE7  1  B5 64        
 006DE9  1               
-006DE9  1  3C 69 02 03  @Loop:	.word Lit,TIB_Base		; Use terminal buffer
+006DE9  1               @Loop:					; Begin
+006DE9  1  3C 69 02 03  	.word Lit,TIB_Base		;   Use terminal buffer
 006DED  1  4F 60 5B 6C  	.word Dup,ParseBuf,Store
 006DF1  1  B5 64        
-006DF3  1  3C 69 FE 00  	.word Lit,TIB_SIZE		; push buf length
-006DF7  1  26 66        	.word Accept			; Read line
-006DF9  1  57 6C B5 64  	.word ParseLen,Store		; save line size
+006DF3  1  3C 69 FE 00  	.word Lit,TIB_SIZE		;   push buf length
+006DF7  1  26 66        	.word Accept			;   Read line
+006DF9  1  57 6C B5 64  	.word ParseLen,Store		;   save line size
 006DFD  1  E2 65        	.word Space
-006DFF  1  40 60 48 6C  	.word Zero,ToIn,Store		; init parse offset
+006DFF  1  40 60 48 6C  	.word Zero,ToIn,Store		;   init parse offset
 006E03  1  B5 64        
-006E05  1  33 6E        	.word Interpret			; Interpret the input line
-006E07  1  3E 6C A8 64  	.word State,Fetch,ZeroEq	; STATE == 0 (interpret mode)?
+006E05  1  33 6E        	.word Interpret			;   Interpret the input line
+006E07  1  3E 6C A8 64  	.word State,Fetch,ZeroEq	;   if interpreting
 006E0B  1  B4 63        
-006E0D  1  7C 67 E9 6D  	.word ZBranch,@Loop		; Loop back (compiling: no prompt)
-006E11  1  36 6B 05 00  	.word DotQuoteRun,5		; Print " ok"
-006E15  1  20 6F 6B 0D  	.byte " ok",$0d,$0a
-006E19  1  0A           
-006E1A  1  5E 67 E9 6D  	.word Branch,@Loop
+006E0D  1  7C 67 18 6E  	.word ZBranch,@8
+006E11  1  36 6B 03 00  	.word DotQuoteRun,3		;     Print " ok"
+006E15  1  20 6F 6B     	.byte " ok"
+006E18  1  C7 65        @8:	.word CR
+006E1A  1  5E 67 E9 6D  	.word Branch,@Loop		;  Again
 006E1E  1               
 006E1E  1               
 006E1E  1               ; Header "RSP-Reset",0 ; ( -- ) (R: ... -- ) reset the return stack pointer
@@ -2674,93 +2675,114 @@ Current file: itc.txt
 006EBD  1  4C 1F 67     	NEXT
 006EC0  1               
 006EC0  1               
-006EC0  1  3A 01 B9 6E   Header ":", 0 ; ( "name" -- )  start compiling a new colon word
-006EC4  1                 ; https://forth-standard.org/standard/core/Colon
-006EC4  1  40 67        Colon:	.word DoCol
-006EC6  1  16 6D        	.word Parse_Name	; get name  ( caddr len )
-006EC8  1  3C 69 40 67  	.word Lit,DoCol,HeaderComma
-006ECC  1  62 69        
-006ECE  1  B9 6E        	.word CloseBracket	; State= compile
-006ED0  1  4F 67        	.word Exit
-006ED2  1               
-006ED2  1               
-006ED2  1  3B 81 C4 6E   Header ";",F_Immediate ;  finish compiling a new colon word
-006ED6  1                 ; https://forth-standard.org/standard/core/Semi
-006ED6  1  40 67        Semicolon: .word DoCol
-006ED8  1  3C 69 4F 67  	.word Lit,Exit,CompileComma	; compile Exit
-006EDC  1  14 69        
-006EDE  1               
-006EDE  1               	; smudge
-006EDE  1               
-006EDE  1  AE 6E        	.word OpenBracket	; STATE= interpret
-006EE0  1  4F 67        	.word Exit
-006EE2  1               
-006EE2  1               
-006EE2  1  44 75 6D 70   Header "Dump",0 ; ( caddr len -- )  Dump memory in hex
-006EE6  1  04 D6 6E     
-006EE9  1  40 67        Dump:	.word DoCol
-006EEB  1  43 62        	.word OneMinus		; so we stop on zero length remaining
-006EED  1  C7 65        @Line:	.word CR
-006EEF  1  85 60 7C 66  	.word Over,DotHex	; print addr
-006EF3  1  3C 69 10 00  	.word Lit,16		; for 16 bytes
-006EF7  1  66 61        @byte:	.word ToR
-006EF9  1  E2 65        	.word Space		;   print space
-006EFB  1  19 6F 8D 66  	.word @Get,CDotHex	;   print byte
-006EFF  1  75 61 43 62  	.word RFrom,OneMinus	;  next
-006F03  1  4F 60 B4 63  	.word Dup,ZeroEq,ZBranch,@byte
-006F07  1  7C 67 F7 6E  
-006F0B  1  61 60        	.word Drop
-006F0D  1  4F 60 C7 63  	.word Dup,ZeroLt,ZBranch,@Line	; until done
-006F11  1  7C 67 ED 6E  
-006F15  1  D7 60        	.word TwoDrop
-006F17  1  4F 67        	.word Exit
-006F19  1               
-006F19  1  1B 6F        @Get:	.word *+2
-006F1B  1  A1 02        	lda (2,x)	; get byte
-006F1D  1  F6 02        	inc 2,x		; addr++
-006F1F  1  D6 00        	dec 0,x		; len--
-006F21  1  4C 53 60     	jmp PushA
-006F24  1               
-006F24  1               
-006F24  1  2E 53 02 E9   Header ".S",0 ; ( -- ) print stack contents non-destructively
-006F28  1  6E           
-006F29  1                 ; https://forth-standard.org/standard/tools/DotS
-006F29  1  40 67        DotS:	.word DoCol
-006F2B  1  3C 69 3C 00  	.word Lit,'<',Emit
-006F2F  1  A1 65        
-006F31  1  3B 61 00 67  	.word Depth,Dot
-006F35  1  3C 69 3E 00  	.word Lit,'>',Emit
-006F39  1  A1 65        
-006F3B  1  E2 65        	.word Space
-006F3D  1  43 6F        	.word @List
-006F3F  1  C7 65        	.word CR
-006F41  1  4F 67        	.word Exit
-006F43  1               
-006F43  1  45 6F        @List:	.word *+2	; Print each element
-006F45  1  A9 5A 00     	lda #PSP_INIT	; for each cell
-006F48  1  85 12        @loop:	sta Temp0	;   done?
-006F4A  1  E4 12        	cpx Temp0
-006F4C  1  B0 14        	bcs @done
-006F4E  1  3A           	dea
-006F4F  1  3A           	dea
-006F50  1  48           	pha
-006F51  1  DA           	phx		;   get value
-006F52  1  AA           	tax
-006F53  1  B5 00        	lda 0,x
-006F55  1  FA           	plx
-006F56  1  20 C8 66     	jsr print_udec	;   print value
-006F59  1  A9 20 00     	lda #' '	;   print space
-006F5C  1  20 AD 65     	jsr EmitA
-006F5F  1  68           	pla
-006F60  1  80 E6        	bra @loop
-006F62  1               
-006F62  1  4C 1F 67     @done:	NEXT
-006F65  1               
-006F65  1               
-006F65  1               Last_ROM_Word = DictLink
-006F65  1               
-006F65  1               ;======================================================================
-006F65  1                 .segment "VECTORS" ; 65265 Hardware vectors
+006EC0  1  43 6F 64 65   Header "Code",0 ; ( "name" -- )  Start a machine code word
+006EC4  1  04 B9 6E     
+006EC7  1                 ; https://forth-standard.org/standard/tools/CODE
+006EC7  1  40 67        Code:	.word DoCol
+006EC9  1  F3 6E        	.word Colon
+006ECB  1  C1 68 27 6C  	.word Here,Latest,Fetch,Store	; patch CFA
+006ECF  1  A8 64 B5 64  
+006ED3  1  AE 6E        	.word OpenBracket	; back to interpret mode
+006ED5  1  4F 67        	.word Exit
+006ED7  1               
+006ED7  1               
+006ED7  1  3B 43 6F 64   Header ";Code",F_Immediate ; ( -- )  End a machine code word
+006EDB  1  65 85 C7 6E  
+006EDF  1                 ; https://forth-standard.org/standard/tools/SemiCODE
+006EDF  1  40 67        SemiCode: .word DoCol
+006EE1  1  3C 69 4C 00  	.word Lit,$4c,CComma,Lit,Next1,Comma  ; jmp Next1
+006EE5  1  FB 68 3C 69  
+006EE9  1  1F 67 E0 68  
+006EED  1  4F 67        	.word Exit
+006EEF  1               
+006EEF  1               
+006EEF  1  3A 01 DF 6E   Header ":", 0 ; ( "name" -- )  start compiling a new colon word
+006EF3  1                 ; https://forth-standard.org/standard/core/Colon
+006EF3  1  40 67        Colon:	.word DoCol
+006EF5  1  16 6D        	.word Parse_Name	; get name  ( caddr len )
+006EF7  1  3C 69 40 67  	.word Lit,DoCol,HeaderComma
+006EFB  1  62 69        
+006EFD  1  B9 6E        	.word CloseBracket	; State= compile
+006EFF  1  4F 67        	.word Exit
+006F01  1               
+006F01  1               
+006F01  1  3B 81 F3 6E   Header ";",F_Immediate ;  finish compiling a new colon word
+006F05  1                 ; https://forth-standard.org/standard/core/Semi
+006F05  1  40 67        Semicolon: .word DoCol
+006F07  1  3C 69 4F 67  	.word Lit,Exit,CompileComma	; compile Exit
+006F0B  1  14 69        
+006F0D  1               
+006F0D  1               	; smudge
+006F0D  1               
+006F0D  1  AE 6E        	.word OpenBracket	; STATE= interpret
+006F0F  1  4F 67        	.word Exit
+006F11  1               
+006F11  1               
+006F11  1  44 75 6D 70   Header "Dump",0 ; ( caddr len -- )  Dump memory in hex
+006F15  1  04 05 6F     
+006F18  1  40 67        Dump:	.word DoCol
+006F1A  1  43 62        	.word OneMinus		; so we stop on zero length remaining
+006F1C  1  C7 65        @Line:	.word CR
+006F1E  1  85 60 7C 66  	.word Over,DotHex	; print addr
+006F22  1  3C 69 10 00  	.word Lit,16		; for 16 bytes
+006F26  1  66 61        @byte:	.word ToR
+006F28  1  E2 65        	.word Space		;   print space
+006F2A  1  48 6F 8D 66  	.word @Get,CDotHex	;   print byte
+006F2E  1  75 61 43 62  	.word RFrom,OneMinus	;  next
+006F32  1  4F 60 B4 63  	.word Dup,ZeroEq,ZBranch,@byte
+006F36  1  7C 67 26 6F  
+006F3A  1  61 60        	.word Drop
+006F3C  1  4F 60 C7 63  	.word Dup,ZeroLt,ZBranch,@Line	; until done
+006F40  1  7C 67 1C 6F  
+006F44  1  D7 60        	.word TwoDrop
+006F46  1  4F 67        	.word Exit
+006F48  1               
+006F48  1  4A 6F        @Get:	.word *+2
+006F4A  1  A1 02        	lda (2,x)	; get byte
+006F4C  1  F6 02        	inc 2,x		; addr++
+006F4E  1  D6 00        	dec 0,x		; len--
+006F50  1  4C 53 60     	jmp PushA
+006F53  1               
+006F53  1               
+006F53  1  2E 53 02 18   Header ".S",0 ; ( -- ) print stack contents non-destructively
+006F57  1  6F           
+006F58  1                 ; https://forth-standard.org/standard/tools/DotS
+006F58  1  40 67        DotS:	.word DoCol
+006F5A  1  3C 69 3C 00  	.word Lit,'<',Emit
+006F5E  1  A1 65        
+006F60  1  3B 61 00 67  	.word Depth,Dot
+006F64  1  3C 69 3E 00  	.word Lit,'>',Emit
+006F68  1  A1 65        
+006F6A  1  E2 65        	.word Space
+006F6C  1  72 6F        	.word @List
+006F6E  1  C7 65        	.word CR
+006F70  1  4F 67        	.word Exit
+006F72  1               
+006F72  1  74 6F        @List:	.word *+2	; Print each element
+006F74  1  A9 5A 00     	lda #PSP_INIT	; for each cell
+006F77  1  85 12        @loop:	sta Temp0	;   done?
+006F79  1  E4 12        	cpx Temp0
+006F7B  1  B0 14        	bcs @done
+006F7D  1  3A           	dea
+006F7E  1  3A           	dea
+006F7F  1  48           	pha
+006F80  1  DA           	phx		;   get value
+006F81  1  AA           	tax
+006F82  1  B5 00        	lda 0,x
+006F84  1  FA           	plx
+006F85  1  20 C8 66     	jsr print_udec	;   print value
+006F88  1  A9 20 00     	lda #' '	;   print space
+006F8B  1  20 AD 65     	jsr EmitA
+006F8E  1  68           	pla
+006F8F  1  80 E6        	bra @loop
+006F91  1               
+006F91  1  4C 1F 67     @done:	NEXT
+006F94  1               
+006F94  1               
+006F94  1               Last_ROM_Word = DictLink
+006F94  1               
+006F94  1               ;======================================================================
+006F94  1                 .segment "VECTORS" ; 65265 Hardware vectors
 000000r 1               ; This is just for the simulator.
 000000r 1               ; The real hardware has these vectors in the '265 Mensch monitor ROM.
 000000r 1               

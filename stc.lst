@@ -279,7 +279,7 @@ Current file: stc.txt
 006016  1  A9 98 04     	lda #Dict_Base	; User area: DP = Dict_Base
 006019  1  85 04        	sta U_DP
 00601B  1               
-00601B  1  A9 90 6C     	lda #Last_ROM_Word ; User area: LATEST = last ROM word
+00601B  1  A9 A9 6C     	lda #Last_ROM_Word ; User area: LATEST = last ROM word
 00601E  1  85 06        	sta U_Latest
 006020  1               
 006020  1               ;	lda #'R'	;???debug
@@ -319,7 +319,7 @@ Current file: stc.txt
 00603F  1  60           	rts
 006040  1               
 006040  1               
-006040  1  44 72 6F 70   Header "Drop", 0 ; ( a -- )
+006040  1  44 72 6F 70   Header "Drop",0 ; ( a -- )
 006044  1  04 39 60     
 006047  1                 ; https://forth-standard.org/standard/core/DROP
 006047  1  E8           Drop:	INX
@@ -327,7 +327,7 @@ Current file: stc.txt
 006049  1  60           	rts
 00604A  1               
 00604A  1               
-00604A  1  53 77 61 70   Header "Swap", 0 ; ( a b -- b a )
+00604A  1  53 77 61 70   Header "Swap",0 ; ( a b -- b a )
 00604E  1  04 47 60     
 006051  1                 ; https://forth-standard.org/standard/core/SWAP
 006051  1  B5 00        Swap:	lda 0,X		; b (TOS)
@@ -337,14 +337,14 @@ Current file: stc.txt
 006059  1  60           	rts
 00605A  1               
 00605A  1               
-00605A  1  4F 76 65 72   Header "Over", 0 ; ( a b -- a b a )
+00605A  1  4F 76 65 72   Header "Over",0 ; ( a b -- a b a )
 00605E  1  04 51 60     
 006061  1                 ; https://forth-standard.org/standard/core/OVER
 006061  1  B5 02        Over:	LDA 2,X		; a (NOS)
 006063  1  80 D6        	bra PushA	; Push copy of a
 006065  1               
 006065  1               
-006065  1  52 6F 74 03   Header "Rot", 0 ; ( a b c -- b c a )
+006065  1  52 6F 74 03   Header "Rot",0 ; ( a b c -- b c a )
 006069  1  61 60        
 00606B  1                 ; https://forth-standard.org/standard/core/ROT
 00606B  1  B4 04        Rot:	ldy 4,X		; a (bottom)
@@ -373,7 +373,7 @@ Current file: stc.txt
 00608F  1  80 AA        	bra PushA
 006091  1               
 006091  1               
-006091  1  32 44 72 6F   Header "2Drop", 0 ; ( a b -- )
+006091  1  32 44 72 6F   Header "2Drop",0 ; ( a b -- )
 006095  1  70 05 8C 60  
 006099  1                 ; https://forth-standard.org/standard/core/TwoDROP
 006099  1               TwoDrop:
@@ -389,7 +389,7 @@ Current file: stc.txt
 00609F  1  80 F8        	bra TwoDrop	; Drop b a
 0060A1  1               
 0060A1  1               
-0060A1  1  32 44 75 70   Header "2Dup", 0 ; ( a b -- a b a b )
+0060A1  1  32 44 75 70   Header "2Dup",0 ; ( a b -- a b a b )
 0060A5  1  04 99 60     
 0060A8  1                 ; https://forth-standard.org/standard/core/TwoDUP
 0060A8  1  B4 00        TwoDup:	ldy 0,x		; b
@@ -403,7 +403,7 @@ Current file: stc.txt
 0060B4  1  60           	rts
 0060B5  1               
 0060B5  1               
-0060B5  1  32 4F 76 65   Header "2Over", 0 ; ( a b c d -- a b c d a b )
+0060B5  1  32 4F 76 65   Header "2Over",0 ; ( a b c d -- a b c d a b )
 0060B9  1  72 05 A8 60  
 0060BD  1                 ; https://forth-standard.org/standard/core/TwoOVER
 0060BD  1  B4 04        TwoOver: ldy 4,x	; a
@@ -411,7 +411,7 @@ Current file: stc.txt
 0060C1  1  80 E9        	bra PushYA
 0060C3  1               
 0060C3  1               
-0060C3  1  32 53 77 61   Header "2Swap", 0 ; ( a b c d -- c d a b )
+0060C3  1  32 53 77 61   Header "2Swap",0 ; ( a b c d -- c d a b )
 0060C7  1  70 05 BD 60  
 0060CB  1                 ; https://forth-standard.org/standard/core/TwoSWAP
 0060CB  1               TwoSwap:
@@ -426,7 +426,7 @@ Current file: stc.txt
 0060DB  1  60           	rts
 0060DC  1               
 0060DC  1               
-0060DC  1  44 65 70 74   Header "Depth", 0 ; ( -- n ) number of items on parameter stack
+0060DC  1  44 65 70 74   Header "Depth",0 ; ( -- n ) number of items on parameter stack
 0060E0  1  68 05 CB 60  
 0060E4  1                 ; https://forth-standard.org/standard/core/DEPTH
 0060E4  1  86 0E        Depth:	stx W		; save PSP
@@ -454,7 +454,7 @@ Current file: stc.txt
 006104  1               ; SECTION 2: RETURN STACK
 006104  1               
 006104  1               
-006104  1  3E 52 02 F7   Header ">R", 0 ; ( a -- ) (R: -- a )  push to return stack
+006104  1  3E 52 02 F7   Header ">R",0 ; ( a -- ) (R: -- a )  push to return stack
 006108  1  60           
 006109  1                 ; https://forth-standard.org/standard/core/toR
 006109  1  B5 00        ToR:	LDA 0,X		; Pop from parameter stack
@@ -466,7 +466,7 @@ Current file: stc.txt
 006110  1  60           	rts
 006111  1               
 006111  1               
-006111  1  52 3E 02 09   Header "R>", 0 ; ( -- a ) (R: a -- )  pop from return stack
+006111  1  52 3E 02 09   Header "R>",0 ; ( -- a ) (R: a -- )  pop from return stack
 006115  1  61           
 006116  1                 ; https://forth-standard.org/standard/core/Rfrom
 006116  1  7A           RFrom:	ply
@@ -475,7 +475,7 @@ Current file: stc.txt
 006119  1  4C 3B 60     	jmp PushA	; Push onto parameter stack
 00611C  1               
 00611C  1               
-00611C  1  52 40 02 16   Header "R@", 0 ; ( -- a ) (R: a -- a )  get a copy of top of return stack
+00611C  1  52 40 02 16   Header "R@",0 ; ( -- a ) (R: a -- a )  get a copy of top of return stack
 006120  1  61           
 006121  1                 ; https://forth-standard.org/standard/core/RFetch
 006121  1  A3 03        RFetch:	lda 3,s
@@ -485,7 +485,7 @@ Current file: stc.txt
 006126  1               ; SECTION 3: ARITHMETIC
 006126  1               
 006126  1               
-006126  1  2B 01 21 61   Header "+", 0 ; ( a b -- a+b )
+006126  1  2B 01 21 61   Header "+",0 ; ( a b -- a+b )
 00612A  1                 ; https://forth-standard.org/standard/core/Plus
 00612A  1  B5 00        Plus:	LDA 0,X		; pop b
 00612C  1  E8           	INX
@@ -496,7 +496,7 @@ Current file: stc.txt
 006133  1  60           	rts
 006134  1               
 006134  1               
-006134  1  2D 01 2A 61   Header "-", 0 ; ( a b -- a-b )
+006134  1  2D 01 2A 61   Header "-",0 ; ( a b -- a-b )
 006138  1                 ; https://forth-standard.org/standard/core/Minus
 006138  1  B5 02        Minus:	LDA 2,X		; a
 00613A  1  38           	SEC
@@ -504,7 +504,7 @@ Current file: stc.txt
 00613D  1  4C 80 60     	jmp NipA
 006140  1               
 006140  1               
-006140  1  4E 65 67 61   Header "Negate", 0 ; ( n -- -n )
+006140  1  4E 65 67 61   Header "Negate",0 ; ( n -- -n )
 006144  1  74 65 06 38  
 006148  1  61           
 006149  1                 ; https://forth-standard.org/standard/core/NEGATE
@@ -576,7 +576,7 @@ Current file: stc.txt
 0061A8  1  80 EC        	bra Max9
 0061AA  1               
 0061AA  1               
-0061AA  1  31 2B 02 9F   Header "1+", 0 ; ( n -- n+1 )
+0061AA  1  31 2B 02 9F   Header "1+",0 ; ( n -- n+1 )
 0061AE  1  61           
 0061AF  1                 ; https://forth-standard.org/standard/core/OnePlus
 0061AF  1               OnePlus:
@@ -590,7 +590,7 @@ Current file: stc.txt
 0061B9  1  80 F4        	bra OnePlus
 0061BB  1               
 0061BB  1               
-0061BB  1  31 2D 02 B7   Header "1-", 0 ; ( n -- n-1 )
+0061BB  1  31 2D 02 B7   Header "1-",0 ; ( n -- n-1 )
 0061BF  1  61           
 0061C0  1                 ; https://forth-standard.org/standard/core/OneMinus
 0061C0  1               OneMinus:
@@ -598,7 +598,7 @@ Current file: stc.txt
 0061C2  1  60           	rts
 0061C3  1               
 0061C3  1               
-0061C3  1  32 2A 02 C0   Header "2*", 0 ; ( n -- n*2 )  shift left
+0061C3  1  32 2A 02 C0   Header "2*",0 ; ( n -- n*2 )  shift left
 0061C7  1  61           
 0061C8  1                 ; https://forth-standard.org/standard/core/TwoTimes
 0061C8  1               TwoStar:
@@ -606,7 +606,7 @@ Current file: stc.txt
 0061CA  1  60           	rts
 0061CB  1               
 0061CB  1               
-0061CB  1  32 2F 02 C8   Header "2/", 0 ; ( n -- n/2 ) signed shift right
+0061CB  1  32 2F 02 C8   Header "2/",0 ; ( n -- n/2 ) signed shift right
 0061CF  1  61           
 0061D0  1                 ; https://forth-standard.org/standard/core/TwoDiv
 0061D0  1               TwoSlash:
@@ -623,7 +623,7 @@ Current file: stc.txt
 0061DE  1  60           	rts
 0061DF  1               
 0061DF  1               
-0061DF  1  4C 53 68 69   Header "LShift", 0 ; ( a u -- a<<u ) logical shift left
+0061DF  1  4C 53 68 69   Header "LShift",0 ; ( a u -- a<<u ) logical shift left
 0061E3  1  66 74 06 DC  
 0061E7  1  61           
 0061E8  1                 ; https://forth-standard.org/standard/core/LSHIFT
@@ -637,7 +637,7 @@ Current file: stc.txt
 0061F3  1  60           	rts
 0061F4  1               
 0061F4  1               
-0061F4  1  52 53 68 69   Header "RShift", 0 ; ( a u -- a>>u ) logical shift right
+0061F4  1  52 53 68 69   Header "RShift",0 ; ( a u -- a>>u ) logical shift right
 0061F8  1  66 74 06 E8  
 0061FC  1  61           
 0061FD  1                 ; https://forth-standard.org/standard/core/RSHIFT
@@ -670,7 +670,7 @@ Current file: stc.txt
 006219  1  4C 3B 60     @3:	jmp PushA
 00621C  1               
 00621C  1               
-00621C  1  55 4D 2A 03   Header "UM*", 0 ; ( u1 u2 -- ud ) unsigned 16x16 -> 32-bit result
+00621C  1  55 4D 2A 03   Header "UM*",0 ; ( u1 u2 -- ud ) unsigned 16x16 -> 32-bit result
 006220  1  0F 62        
 006222  1                 ; Result: TOS = high cell, NOS = low cell
 006222  1                 ; https://forth-standard.org/standard/core/UMTimes
@@ -705,7 +705,7 @@ Current file: stc.txt
 006255  1  60           @9:	rts
 006256  1               
 006256  1               
-006256  1  2A 01 3E 62   Header "*", 0 ; ( a b -- a*b ) 16x16 -> 16 (low word)
+006256  1  2A 01 3E 62   Header "*",0 ; ( a b -- a*b ) 16x16 -> 16 (low word)
 00625A  1                 ; https://forth-standard.org/standard/core/Times
 00625A  1  20 22 62     Star:	jsr UMStar
 00625D  1  E8           	inx		; drop hi word
@@ -713,7 +713,7 @@ Current file: stc.txt
 00625F  1  60           	rts
 006260  1               
 006260  1               
-006260  1  55 4D 2F 4D   Header "UM/MOD", 0 ; ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
+006260  1  55 4D 2F 4D   Header "UM/MOD",0 ; ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
 006264  1  4F 44 06 5A  
 006268  1  62           
 006269  1                 ; Stack: NOS_HI=ud_high NOS=ud_low TOS=u (divisor)
@@ -776,7 +776,7 @@ Current file: stc.txt
 0062BB  1  60           	rts
 0062BC  1               
 0062BC  1               
-0062BC  1  2F 4D 4F 44   Header "/MOD", 0 ; ( n1 n2 -- rem quot ) signed division
+0062BC  1  2F 4D 4F 44   Header "/MOD",0 ; ( n1 n2 -- rem quot ) signed division
 0062C0  1  04 92 62     
 0062C3  1                 ; Divide n1 by n2, giving the single-cell remainder n3 and the single-cell quotient n4. An
 0062C3  1                 ; ambiguous condition exists if n2 is zero. If n1 and n2 differ in sign, the implementation defined
@@ -790,13 +790,13 @@ Current file: stc.txt
 0062CC  1  80 C4        	bra SMSRem
 0062CE  1               
 0062CE  1               
-0062CE  1  2F 01 C3 62   Header "/", 0 ; ( n1 n2 -- quot ) signed division
+0062CE  1  2F 01 C3 62   Header "/",0 ; ( n1 n2 -- quot ) signed division
 0062D2  1                 ; https://forth-standard.org/standard/core/Div
 0062D2  1  20 C3 62     Slash:	jsr SlashMod
 0062D5  1  4C 7E 60     	jmp Nip		; remainder
 0062D8  1               
 0062D8  1               
-0062D8  1  4D 6F 64 03   Header "Mod", 0 ; ( n1 n2 -- rem ) signed remainder
+0062D8  1  4D 6F 64 03   Header "Mod",0 ; ( n1 n2 -- rem ) signed remainder
 0062DC  1  D2 62        
 0062DE  1                 ; https://forth-standard.org/standard/core/MOD
 0062DE  1  20 C3 62     Mod:	jsr SlashMod
@@ -839,7 +839,7 @@ Current file: stc.txt
 00630A  1  80 F0        	bra False1
 00630C  1               
 00630C  1               
-00630C  1  3D 01 04 63   Header "=", 0 ; ( a b -- flag )
+00630C  1  3D 01 04 63   Header "=",0 ; ( a b -- flag )
 006310  1                 ; https://forth-standard.org/standard/core/Equal
 006310  1  B5 00        Equal:	LDA 0,X
 006312  1  D5 02        	CMP 2,X
@@ -850,7 +850,7 @@ Current file: stc.txt
 00631A  1  60           	rts
 00631B  1               
 00631B  1               
-00631B  1  3C 3E 02 10   Header "<>", 0 ; ( a b -- flag )
+00631B  1  3C 3E 02 10   Header "<>",0 ; ( a b -- flag )
 00631F  1  63           
 006320  1                 ; https://forth-standard.org/standard/core/ne
 006320  1               NotEqual:
@@ -967,7 +967,7 @@ Current file: stc.txt
 0063BE  1  60           	rts
 0063BF  1               
 0063BF  1               
-0063BF  1  21 01 BA 63   Header "!", 0 ; ( val addr -- ) store cell
+0063BF  1  21 01 BA 63   Header "!",0 ; ( val addr -- ) store cell
 0063C3  1                 ; https://forth-standard.org/standard/core/Store
 0063C3  1               Store:
 0063C3  1  B5 02        	lda 2,x		; get val
@@ -975,7 +975,7 @@ Current file: stc.txt
 0063C7  1  4C 99 60     	jmp TwoDrop	; drop addr val
 0063CA  1               
 0063CA  1               
-0063CA  1  43 40 02 C3   Header "C@", 0 ; ( addr -- byte ) fetch byte
+0063CA  1  43 40 02 C3   Header "C@",0 ; ( addr -- byte ) fetch byte
 0063CE  1  63           
 0063CF  1                 ; https://forth-standard.org/standard/core/CFetch
 0063CF  1               CFetch:
@@ -987,7 +987,7 @@ Current file: stc.txt
 0063DA  1  60           	rts
 0063DB  1               
 0063DB  1               
-0063DB  1  43 21 02 CF   Header "C!", 0 ; ( byte addr -- ) store byte
+0063DB  1  43 21 02 CF   Header "C!",0 ; ( byte addr -- ) store byte
 0063DF  1  63           
 0063E0  1                 ; https://forth-standard.org/standard/core/CStore
 0063E0  1               CStore:
@@ -998,7 +998,7 @@ Current file: stc.txt
 0063E8  1  4C 99 60     	jmp TwoDrop	; drop addr byte, NEXT
 0063EB  1               
 0063EB  1               
-0063EB  1  32 40 02 E0   Header "2@", 0 ; ( addr -- d ) fetch double cell
+0063EB  1  32 40 02 E0   Header "2@",0 ; ( addr -- d ) fetch double cell
 0063EF  1  63           
 0063F0  1                 ; (hi cell at addr, lo cell at addr+2, cells stored little-endian)
 0063F0  1                 ; https://forth-standard.org/standard/core/TwoFetch
@@ -1010,7 +1010,7 @@ Current file: stc.txt
 0063FA  1  4C 3B 60     	jmp PushA
 0063FD  1               
 0063FD  1               
-0063FD  1  32 21 02 F0   Header "2!", 0 ; ( d addr -- ) store double cell
+0063FD  1  32 21 02 F0   Header "2!",0 ; ( d addr -- ) store double cell
 006401  1  63           
 006402  1                 ; https://forth-standard.org/standard/core/TwoStore
 006402  1               TwoStore:
@@ -1030,7 +1030,7 @@ Current file: stc.txt
 006411  1                 ; https://forth-standard.org/standard/tools/q
 006411  1               
 006411  1               
-006411  1  43 4D 6F 76   Header "CMove", 0 ; ( src dst u -- ) copy u bytes from src to dst ascending
+006411  1  43 4D 6F 76   Header "CMove",0 ; ( src dst u -- ) copy u bytes from src to dst ascending
 006415  1  65 05 02 64  
 006419  1                 ; https://forth-standard.org/standard/string/CMOVE
 006419  1               CMove:
@@ -1047,7 +1047,7 @@ Current file: stc.txt
 006429  1  4C 9D 60     @9:	jmp ThreeDrop	; Drop u dst src
 00642C  1               
 00642C  1               
-00642C  1  46 69 6C 6C   Header "Fill", 0 ; ( caddr u byte -- ) fill u bytes starting at addr with byte
+00642C  1  46 69 6C 6C   Header "Fill",0 ; ( caddr u byte -- ) fill u bytes starting at addr with byte
 006430  1  04 19 64     
 006433  1                 ; https://forth-standard.org/standard/core/FILL
 006433  1               Fill:
@@ -1275,7 +1275,7 @@ Current file: stc.txt
 006543  1  60           	rts
 006544  1               
 006544  1               
-006544  1  2E 48 65 78   Header ".Hex", 0 ; ( n -- ) Print TOS as hex
+006544  1  2E 48 65 78   Header ".Hex",0 ; ( n -- ) Print TOS as hex
 006548  1  04 FB 64     
 00654B  1  B5 01        DotHex:	lda 1,x		; do hi byte
 00654D  1  20 5E 65     	jsr CDotHexA
@@ -1352,7 +1352,7 @@ Current file: stc.txt
 0065B8  1  60           	rts
 0065B9  1               
 0065B9  1               
-0065B9  1  2E 01 7D 65   Header ".", 0 ; ( n -- ) print signed number
+0065B9  1  2E 01 7D 65   Header ".",0 ; ( n -- ) print signed number
 0065BD  1                 ; https://forth-standard.org/standard/core/d
 0065BD  1  B5 00        Dot:	lda 0,x		; negative?
 0065BF  1  10 09        	bpl @4
@@ -2350,7 +2350,7 @@ Current file: stc.txt
 006B82  1  80 07        	bra Quit
 006B84  1               
 006B84  1               
-006B84  1  51 75 69 74   Header "Quit", 0 ; ( -- ) outer interpreter loop
+006B84  1  51 75 69 74   Header "Quit",0 ; ( -- ) outer interpreter loop
 006B88  1  04 75 6B     
 006B8B  1                 ; Resets return stack, reads and interprets input forever
 006B8B  1                 ; https://forth-standard.org/standard/core/QUIT
@@ -2369,164 +2369,177 @@ Current file: stc.txt
 006BA3  1  85 0A        	sta U_ParseLen			; save line size
 006BA5  1  20 C1 64     	jsr Space			; type a space after the line
 006BA8  1  64 0C        	stz U_ToIn			; init parse offset
-006BAA  1  20 C9 6B     	jsr Interpret			; Interpret the input line
+006BAA  1  20 CA 6B     	jsr Interpret			; Interpret the input line
 006BAD  1  A5 02        	lda U_State			; STATE == 0 (interpret mode)?
-006BAF  1  D0 E0        	bne @Loop			; Loop back (compiling: no prompt)
+006BAF  1  D0 08        	bne @8				; Loop back (compiling: no prompt)
 006BB1  1  20 3D 69     	jsr DotQuoteRun
-006BB4  1  05 00        	.word 5				; Print " ok"
-006BB6  1  20 6F 6B 0D  	.byte " ok",$0d,$0a
-006BBA  1  0A           
-006BBB  1  80 D4        	bra @Loop
-006BBD  1               
-006BBD  1               
-006BBD  1  49 6E 74 65   Header "Interpret",0 ; ( -- ) parse and execute/compile words from input
-006BC1  1  72 70 72 65  
-006BC5  1  74 09 8B 6B  
-006BC9  1               Interpret:
-006BC9  1               @next_word:
-006BC9  1  20 D3 6A     	jsr Parse_Name		; Parse next space-delimited word
-006BCC  1  B5 00        	lda 0,x
-006BCE  1  F0 66        	beq @done		; no more words in source?
-006BD0  1               
-006BD0  1  20 A8 60     	jsr TwoDup		; ( caddr len caddr len )
-006BD3  1  A5 06        	lda U_Latest		; search for the word in dictionary
-006BD5  1  20 3B 60     	jsr PushA
-006BD8  1  20 28 68     	jsr Search_WordList	; ( addr len wid -- 0 | xt 1 | xt -1 )
-006BDB  1  B5 00        	lda 0,x
-006BDD  1  F0 1D        	beq @not_found		; result: 0=not found, 1=normal, -1=immediate
-006BDF  1  30 0E        	bmi @exec_word
-006BE1  1               
-006BE1  1  A5 02        	lda U_State
-006BE3  1  F0 0A        	beq @exec_word
-006BE5  1               
-006BE5  1               	; Compile the word: , the xt
-006BE5  1  E8           	inx			; drop flag
-006BE6  1  E8           	inx
-006BE7  1  20 4F 67     	jsr CompileComma
-006BEA  1  20 99 60     	jsr TwoDrop		; 2Drop extra string
-006BED  1  80 DA        	bra @next_word
-006BEF  1               
-006BEF  1               @exec_word: ; Execute: load xt, jump through code field
-006BEF  1  E8           	inx			; drop flag
-006BF0  1  E8           	inx
-006BF1  1  20 7E 60     	jsr Nip
-006BF4  1  20 7E 60     	jsr Nip			; discard extra string copy
-006BF7  1  20 D6 65     	jsr Execute		; run the xt
-006BFA  1  80 CD        	bra @next_word
-006BFC  1               
-006BFC  1               @not_found:
-006BFC  1  E8           	inx			; Drop search result
-006BFD  1  E8           	inx
-006BFE  1  20 A8 60     	jsr TwoDup		; ( caddr len caddr len )
-006C01  1  20 FA 6A     	jsr Number		; Try to convert as number
-006C04  1  B5 00        	lda 0,x
-006C06  1  F0 16        	beq @Err		; ( adr len -- 0 ) or ( adr len -- n -1 ) or ( adr len -- d -2 )
-006C08  1  E8           	inx
+006BB4  1  03 00        	.word 3				; Print " ok"
+006BB6  1  20 6F 6B     	.byte " ok"
+006BB9  1  20 AE 64     @8:	jsr CR
+006BBC  1  80 D3        	bra @Loop
+006BBE  1               
+006BBE  1               
+006BBE  1  49 6E 74 65   Header "Interpret",0 ; ( -- ) parse and execute/compile words from input
+006BC2  1  72 70 72 65  
+006BC6  1  74 09 8B 6B  
+006BCA  1               Interpret:
+006BCA  1               @next_word:
+006BCA  1  20 D3 6A     	jsr Parse_Name		; Parse next space-delimited word
+006BCD  1  B5 00        	lda 0,x
+006BCF  1  F0 66        	beq @done		; no more words in source?
+006BD1  1               
+006BD1  1  20 A8 60     	jsr TwoDup		; ( caddr len caddr len )
+006BD4  1  A5 06        	lda U_Latest		; search for the word in dictionary
+006BD6  1  20 3B 60     	jsr PushA
+006BD9  1  20 28 68     	jsr Search_WordList	; ( addr len wid -- 0 | xt 1 | xt -1 )
+006BDC  1  B5 00        	lda 0,x
+006BDE  1  F0 1D        	beq @not_found		; result: 0=not found, 1=normal, -1=immediate
+006BE0  1  30 0E        	bmi @exec_word
+006BE2  1               
+006BE2  1  A5 02        	lda U_State
+006BE4  1  F0 0A        	beq @exec_word
+006BE6  1               
+006BE6  1               	; Compile the word: , the xt
+006BE6  1  E8           	inx			; drop flag
+006BE7  1  E8           	inx
+006BE8  1  20 4F 67     	jsr CompileComma
+006BEB  1  20 99 60     	jsr TwoDrop		; 2Drop extra string
+006BEE  1  80 DA        	bra @next_word
+006BF0  1               
+006BF0  1               @exec_word: ; Execute: load xt, jump through code field
+006BF0  1  E8           	inx			; drop flag
+006BF1  1  E8           	inx
+006BF2  1  20 7E 60     	jsr Nip
+006BF5  1  20 7E 60     	jsr Nip			; discard extra string copy
+006BF8  1  20 D6 65     	jsr Execute		; run the xt
+006BFB  1  80 CD        	bra @next_word
+006BFD  1               
+006BFD  1               @not_found:
+006BFD  1  E8           	inx			; Drop search result
+006BFE  1  E8           	inx
+006BFF  1  20 A8 60     	jsr TwoDup		; ( caddr len caddr len )
+006C02  1  20 FA 6A     	jsr Number		; Try to convert as number
+006C05  1  B5 00        	lda 0,x
+006C07  1  F0 16        	beq @Err		; ( adr len -- 0 ) or ( adr len -- n -1 ) or ( adr len -- d -2 )
 006C09  1  E8           	inx
-006C0A  1  A5 02        	lda U_State
-006C0C  1  F0 08        	beq @nf9
-006C0E  1  20 88 67     	jsr Literal		; compile n
-006C11  1  20 99 60     	jsr TwoDrop		; 2Drop string
-006C14  1  80 B3        	bra @next_word
-006C16  1               
-006C16  1  20 7E 60     @nf9:	jsr Nip
-006C19  1  20 7E 60     	jsr Nip			; discard string, keep n
-006C1C  1  80 AB        	bra @next_word
-006C1E  1               
-006C1E  1  E8           @Err:	inx			; number flag
-006C1F  1  E8           	inx
-006C20  1  20 E2 64     	jsr Type		; string
-006C23  1  20 3D 69     	jsr DotQuoteRun
-006C26  1  0B 00        	.word 11
-006C28  1  20 6E 6F 74  	.byte " not found "
-006C2C  1  20 66 6F 75  
-006C30  1  6E 64 20     
-006C33  1  20 75 6B     	jsr Abort
-006C36  1               
-006C36  1  4C 99 60     @done:	jmp TwoDrop		; discard empty parse string
-006C39  1               
-006C39  1               
-006C39  1  5B 81 C9 6B   Header "[",F_Immediate ; ( -- )  switch State to interpret
-006C3D  1                 ; https://forth-standard.org/standard/core/Bracket
-006C3D  1               OpenBracket:
-006C3D  1  64 02        	stz U_State
-006C3F  1  60           	rts
-006C40  1               
-006C40  1               
-006C40  1  5D 01 3D 6C   Header "]",0 ; ( -- )  switch State to compile
-006C44  1                ; https://forth-standard.org/standard/right-bracket
-006C44  1               CloseBracket:
-006C44  1  86 02        	stx U_State	; set to non-zero
-006C46  1  60           	rts
-006C47  1               
-006C47  1               
-006C47  1  3A 01 44 6C   Header ":", 0 ; ( "name" -- )  start compiling a new colon word
-006C4B  1                 ; https://forth-standard.org/standard/core/Colon
-006C4B  1  20 D3 6A     Colon:	jsr Parse_Name	; get name  ( caddr len )
-006C4E  1  20 AD 67     	jsr HeaderComma
-006C51  1               	; smudge
-006C51  1  4C 44 6C     	jmp CloseBracket ; State= compile
-006C54  1               
-006C54  1               
-006C54  1  3B 81 4B 6C   Header ";",F_Immediate ;  finish compiling a new colon word
-006C58  1                 ; https://forth-standard.org/standard/core/Semi
-006C58  1               Semicolon:
-006C58  1  20 E4 65     	jsr Exit		; compile Exit
-006C5B  1               
-006C5B  1               	; smudge
-006C5B  1               
-006C5B  1  4C 3D 6C     	jmp OpenBracket		; STATE= interpret
-006C5E  1               
-006C5E  1               
-006C5E  1  44 75 6D 70   Header "Dump",0 ; ( caddr len -- )  Dump memory in hex
-006C62  1  04 58 6C     
-006C65  1  D6 00        Dump:	dec 0,x		; so we stop on zero length remaining
-006C67  1  20 AE 64     @line:	jsr CR
-006C6A  1  20 61 60     	jsr Over	; print addr
-006C6D  1  20 4B 65     	jsr DotHex
-006C70  1  A0 10 00     	ldy #16		; for 16 bytes
-006C73  1  5A           @byte:	phy
-006C74  1  20 C1 64     	jsr Space	;   print space
-006C77  1  A1 02        	lda (2,x)	;   get byte
-006C79  1  F6 02        	inc 2,x
-006C7B  1  D6 00        	dec 0,x
-006C7D  1  20 5E 65     	jsr CDotHexA	;   print byte
-006C80  1  7A           	ply		;  next
-006C81  1  88           	dey
-006C82  1  D0 EF        	bne @byte
-006C84  1  B5 00        	lda 0,x		; until done
-006C86  1  10 DF        	bpl @line
-006C88  1  4C 99 60     	jmp TwoDrop
-006C8B  1               
-006C8B  1               
-006C8B  1  2E 53 02 65   Header ".S",0 ; ( -- ) print stack contents non-destructively
-006C8F  1  6C           
-006C90  1                 ; https://forth-standard.org/standard/tools/DotS
-006C90  1  A9 3C 00     DotS:	lda #'<'
-006C93  1  20 97 64     	jsr EmitA
-006C96  1  20 E4 60     	jsr Depth
-006C99  1  20 39 60     	jsr Dup
-006C9C  1  20 BD 65     	jsr Dot
-006C9F  1  A9 3E 00     	lda #'>'
-006CA2  1  20 97 64     	jsr EmitA
-006CA5  1  20 C1 64     	jsr Space
-006CA8  1               
-006CA8  1  B5 00        @loop:	lda 0,x		; while entrys remain
-006CAA  1  F0 0D        	beq @done
-006CAC  1  20 3B 60     	jsr PushA	;   get
-006CAF  1  20 F7 60     	jsr Pick
-006CB2  1  20 BD 65     	jsr Dot		;   print
-006CB5  1  D6 00        	dec 0,x
-006CB7  1  10 EF        	bpl @loop	;  next
-006CB9  1  E8           @done:	inx		; drop n
-006CBA  1  E8           	inx
-006CBB  1  4C AE 64     	jmp CR
-006CBE  1               
-006CBE  1               
-006CBE  1               Last_ROM_Word = DictLink
-006CBE  1               
-006CBE  1               ;======================================================================
-006CBE  1                 .segment "VECTORS" ; 65265 Hardware vectors
+006C0A  1  E8           	inx
+006C0B  1  A5 02        	lda U_State
+006C0D  1  F0 08        	beq @nf9
+006C0F  1  20 88 67     	jsr Literal		; compile n
+006C12  1  20 99 60     	jsr TwoDrop		; 2Drop string
+006C15  1  80 B3        	bra @next_word
+006C17  1               
+006C17  1  20 7E 60     @nf9:	jsr Nip
+006C1A  1  20 7E 60     	jsr Nip			; discard string, keep n
+006C1D  1  80 AB        	bra @next_word
+006C1F  1               
+006C1F  1  E8           @Err:	inx			; number flag
+006C20  1  E8           	inx
+006C21  1  20 E2 64     	jsr Type		; string
+006C24  1  20 3D 69     	jsr DotQuoteRun
+006C27  1  0B 00        	.word 11
+006C29  1  20 6E 6F 74  	.byte " not found "
+006C2D  1  20 66 6F 75  
+006C31  1  6E 64 20     
+006C34  1  20 75 6B     	jsr Abort
+006C37  1               
+006C37  1  4C 99 60     @done:	jmp TwoDrop		; discard empty parse string
+006C3A  1               
+006C3A  1               
+006C3A  1  5B 81 CA 6B   Header "[",F_Immediate ; ( -- )  switch State to interpret
+006C3E  1                 ; https://forth-standard.org/standard/core/Bracket
+006C3E  1               OpenBracket:
+006C3E  1  64 02        	stz U_State
+006C40  1  60           	rts
+006C41  1               
+006C41  1               
+006C41  1  5D 01 3E 6C   Header "]",0 ; ( -- )  switch State to compile
+006C45  1                ; https://forth-standard.org/standard/right-bracket
+006C45  1               CloseBracket:
+006C45  1  86 02        	stx U_State	; set to non-zero
+006C47  1  60           	rts
+006C48  1               
+006C48  1               
+006C48  1  43 6F 64 65   Header "Code",0 ; ( "name" -- )  Start a machine code word
+006C4C  1  04 45 6C     
+006C4F  1                 ; https://forth-standard.org/standard/tools/CODE
+006C4F  1  20 64 6C     Code:	jsr Colon
+006C52  1  4C 3E 6C     	jmp OpenBracket	; back to interpret mode
+006C55  1               
+006C55  1               
+006C55  1  3B 43 6F 64   Header ";Code",F_Immediate ; ( -- )  End a machine code word
+006C59  1  65 85 4F 6C  
+006C5D  1                 ; https://forth-standard.org/standard/tools/SemiCODE
+006C5D  1  4C E4 65     SemiCode: jmp Exit	; compile rts
+006C60  1               
+006C60  1               
+006C60  1  3A 01 5D 6C   Header ":",0 ; ( "name" -- )  start compiling a new colon word
+006C64  1                 ; https://forth-standard.org/standard/core/Colon
+006C64  1  20 D3 6A     Colon:	jsr Parse_Name	; get name  ( caddr len )
+006C67  1  20 AD 67     	jsr HeaderComma
+006C6A  1               	; smudge
+006C6A  1  4C 45 6C     	jmp CloseBracket ; State= compile
+006C6D  1               
+006C6D  1               
+006C6D  1  3B 81 64 6C   Header ";",F_Immediate ;  finish compiling a new colon word
+006C71  1                 ; https://forth-standard.org/standard/core/Semi
+006C71  1               Semicolon:
+006C71  1  20 E4 65     	jsr Exit		; compile Exit
+006C74  1               
+006C74  1               	; smudge
+006C74  1               
+006C74  1  4C 3E 6C     	jmp OpenBracket		; STATE= interpret
+006C77  1               
+006C77  1               
+006C77  1  44 75 6D 70   Header "Dump",0 ; ( caddr len -- )  Dump memory in hex
+006C7B  1  04 71 6C     
+006C7E  1  D6 00        Dump:	dec 0,x		; so we stop on zero length remaining
+006C80  1  20 AE 64     @line:	jsr CR
+006C83  1  20 61 60     	jsr Over	; print addr
+006C86  1  20 4B 65     	jsr DotHex
+006C89  1  A0 10 00     	ldy #16		; for 16 bytes
+006C8C  1  5A           @byte:	phy
+006C8D  1  20 C1 64     	jsr Space	;   print space
+006C90  1  A1 02        	lda (2,x)	;   get byte
+006C92  1  F6 02        	inc 2,x
+006C94  1  D6 00        	dec 0,x
+006C96  1  20 5E 65     	jsr CDotHexA	;   print byte
+006C99  1  7A           	ply		;  next
+006C9A  1  88           	dey
+006C9B  1  D0 EF        	bne @byte
+006C9D  1  B5 00        	lda 0,x		; until done
+006C9F  1  10 DF        	bpl @line
+006CA1  1  4C 99 60     	jmp TwoDrop
+006CA4  1               
+006CA4  1               
+006CA4  1  2E 53 02 7E   Header ".S",0 ; ( -- ) print stack contents non-destructively
+006CA8  1  6C           
+006CA9  1                 ; https://forth-standard.org/standard/tools/DotS
+006CA9  1  A9 3C 00     DotS:	lda #'<'
+006CAC  1  20 97 64     	jsr EmitA
+006CAF  1  20 E4 60     	jsr Depth
+006CB2  1  20 39 60     	jsr Dup
+006CB5  1  20 BD 65     	jsr Dot
+006CB8  1  A9 3E 00     	lda #'>'
+006CBB  1  20 97 64     	jsr EmitA
+006CBE  1  20 C1 64     	jsr Space
+006CC1  1               
+006CC1  1  B5 00        @loop:	lda 0,x		; while entrys remain
+006CC3  1  F0 0D        	beq @done
+006CC5  1  20 3B 60     	jsr PushA	;   get
+006CC8  1  20 F7 60     	jsr Pick
+006CCB  1  20 BD 65     	jsr Dot		;   print
+006CCE  1  D6 00        	dec 0,x
+006CD0  1  10 EF        	bpl @loop	;  next
+006CD2  1  E8           @done:	inx		; drop n
+006CD3  1  E8           	inx
+006CD4  1  4C AE 64     	jmp CR
+006CD7  1               
+006CD7  1               
+006CD7  1               Last_ROM_Word = DictLink
+006CD7  1               
+006CD7  1               ;======================================================================
+006CD7  1                 .segment "VECTORS" ; 65265 Hardware vectors
 000000r 1               ; This is just for the simulator.
 000000r 1               ; The real hardware has these vectors in the '265 Mensch monitor ROM.
 000000r 1               
