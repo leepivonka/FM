@@ -688,6 +688,34 @@ Create CntBuf  3 C,
 \ Header "Count",0 ; ( addr -- addr+1 len ) counted string to addr/len
 CntBuf Count  3 Is=  Here Is= IsEmpty
 
+: s1 ( -- adr len )  S" abcde" ;  IsEmpty
+: s6 ( -- adr len )  S" abb" ;  IsEmpty
+\ Header "Compare",0 ; ( c-addr1 u1 c-addr2 u2 -- n )  Compare 2 strings
+: s11 S" 0abc" ;
+: s12 S" 0aBc" ;
+s11 s12 Compare   1 Is= IsEmpty
+s12 s11 Compare  -1 Is= IsEmpty
+
+: "abdde"  S" abdde"  ;  IsEmpty
+: "abbde"  S" abbde"  ;  IsEmpty
+: "abcdf"  S" abcdf"  ;  IsEmpty
+: "abcdee" S" abcdee" ;  IsEmpty
+s1 "abcdee" Compare   1 Is= IsEmpty
+s1 "abdde"  Compare  -1 Is= IsEmpty
+s1 "abbde"  Compare   1 Is= IsEmpty
+s1 "abcdf"  Compare  -1 Is= IsEmpty
+: Pad Here 68 + ;  IsEmpty
+s1        s1 Compare  0 Is= IsEmpty
+s1  Pad Swap CMove  IsEmpty		\ Copy s1 to PAD
+s1  Pad Over Compare  0 Is= IsEmpty
+s1     Pad 6 Compare  1 Is= IsEmpty
+Pad 10    s1 Compare -1 Is= IsEmpty
+\ s1     Pad 0 Compare  1 Is= IsEmpty
+\ Pad  0    s1 Compare -1 Is= IsEmpty
+s1        s6 Compare  1 Is= IsEmpty
+s6        s1 Compare -1 Is= IsEmpty
+
+
 \ Header "Parse",0 ; ( "name" c -- addr u )  "Parse input with delimiter character"
 \ Header "Parse-Name",0 ; (  (spaces)name(space)  -- c-addr u )  Skip leading spaces. Parse space delimited name.
 \ Header "Number",0 ; ( adr len -- 0 ) or ( adr len -- n -1 ) or ( adr len -- d -2 ) or ( adr len -- fp -3 )

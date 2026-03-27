@@ -27,13 +27,12 @@
 	.feature loose_string_term ; used to put quotes in strings
 	.feature org_per_seg
 	.smart		;watch the code to determine sizes
-	.i16
-	.a16
 
-  .bss	; uninitialized RAM
-	.org $300	; away from '265 Mensch monitor stuff in lo RAM
-  .code ; ROM
-	.org $6000	; in RAM for now
+; Memory segment layout
+  .bss	; uninitialized read-write
+	.org $300	; in 65c265sxb onboard RAM, away from Mensch monitor stuff in lo RAM
+  .code ; initialized, read-only
+	.org $6000	; in 65c265sxb onboard RAM
 
 
 ; CPU P flag bits:
@@ -65,9 +64,9 @@ P_M	= $20	; M size
 
 
 ; Word header flag & length byte bits:
-F_Immediate	= $80
+F_Immediate	= $80	; when compiling, execute this word
 F_Hidden	= $40	; smudged
-F_LengthMask	= $1F
+F_LengthMask	= $1F	; mask for name length bits
 
  .macro Header name, flags ; generate a dictionary entry header
 ;	name	- string literal for the name field
@@ -87,8 +86,9 @@ DictLink .set 0 ;ptr to nt & xt of previous word, 0=end of list
 		; Used by Header to chain the generated word headers together.
 
 ;=============================================================================
- .zeropage ; Direct Page, aka User Area
+ .zeropage ; Current direct page, aka User Area
 ; ca65 will use direct page addressing for these automatically.
+; This is only a definition - it does not allocate any memory by itself - see UserFirst.
 ; On the 65816 with it's moveable direct page, we'll just make the direct page the user area.
 ; We don't put it at $000000 so we don't conflict with the '265 Mensch monitor stuff.
 ; The current copy of these variables should be accessed using direct addressing.
@@ -102,15 +102,17 @@ U_Latest:	.res 2		; ptr Latest word header
 U_ParseBuf:	.res 2		; Source string buffer address
 U_ParseLen:	.res 2		; Source string length
 U_ToIn:		.res 2		; >IN  parse offset in U_ParseBuf
+U_HoldPtr:	.res 2		; current start of HOLD string
+U_RandState:	.res 4		; random # state
 ;U_ExceptionHandler: .res 2	; Exception handler
-
+IP:		.res 2		; Instruction Pointer
+U_User:		.res 16		; user-defined user variable space
 
 ; These are in the user area so they are simpler to use.
 ; It's OK to have these as per-user even though they don't need to be.
-IP:			.res 2		; Instruction Pointer
 
 ;-- Scratch variables, default is not preserved across subroutine calls
-W:			.res 2		; (current CFA in Next1)
+W:		.res 2		; (current CFA in Next1)
 Temp0:		.res 2
 Temp2:		.res 2
 Temp4:		.res 2
@@ -122,7 +124,7 @@ PSP_INIT:		; Parameter stack initial pointer
 User_Size: ; size of fixed part of user area
 
 ;==============================================================================
- .bss ; unitialized RAM
+ .bss
 
 TempAbsA:	.res 2		; absolute scratch
 
@@ -139,10 +141,10 @@ Dict_Base: ; RAM dictionary start
 
 
 ;==============================================================================
- .code ; ROM
+ .code
 
 ;------------------------------------------------------------------------------
-FORTH_INIT: ; SYSTEM INITIALIZATION
+Cold : ; Cold start
 
 	CLC
 	XCE		; Clear emulation bit → native mode
@@ -179,6 +181,9 @@ FORTH_INIT: ; SYSTEM INITIALIZATION
 
 ;Break1: .word *+2  ;???debug
 ;	NEXT
+
+ Header "Cold",0 ; Cold start
+	.word Cold
 
 ;==============================================================================
 ; SECTION 1: PARAMETER STACK
@@ -371,6 +376,16 @@ ToR:	.word *+2	; CFA
 	NEXT
 
 
+ Header "2>R",0 ; ( x1 x2 -- ) ( R: -- x1 x2 )  move cell pair to return stack
+  ; https://forth-standard.org/standard/core/TwotoR
+TwoToR:	.word *+2	; CFA
+	lda 2,x		; get x1
+	pha
+	lda 0,x		; get x2
+	pha
+	jmp TwoDrop+2	; 2Drop
+
+
  Header "R>", 0 ; ( -- a ) (R: a -- )  pop from return stack
   ; https://forth-standard.org/standard/core/Rfrom
 RFrom:	.word *+2	; CFA
@@ -378,11 +393,29 @@ RFrom:	.word *+2	; CFA
 	jmp PushA	; Push onto parameter stack
 
 
+ Header "2R>",0 ; ( R: x1 x2 -- ) ( -- x1 x2 )  Pop 2 cells from the return stack
+  ; https://forth-standard.org/standard/core/TwoRfrom
+TwoRFrom: .word *+2	; CFA
+	dex
+	dex
+	dex
+	dex
+	pla		; do x2
+	sta 0,x
+	pla		; do x1
+	sta 2,x
+	NEXT
+
+
  Header "R@", 0 ; ( -- a ) (R: a -- a )  get a copy of top of return stack
   ; https://forth-standard.org/standard/core/RFetch
 RFetch:	.word *+2	; CFA
 	lda 1,s
 	jmp PushA
+
+
+; Header "2R@",0 ; ( R: x1 x2 -- x1 x2 ) ( -- x1 x2 )  Get top 2 return stack cells
+  ; https://forth-standard.org/standard/core/TwoRFetch
 
 ;==============================================================================
 ; SECTION 3: ARITHMETIC
@@ -1989,6 +2022,11 @@ AbortQRun: .word *+2 ; ( f -- ) runtime code ------
 ;==============================================================================
 ; SECTION 10: USER AREA ACCESSORS
 
+ Header "User0",0 ; ( -- addr )  Return addr of user area
+User0:	tdc
+	jmp PushA
+
+
 DoUser: ; ( -- adr ) push user variable address
 	phy		; save IP
 	ldy W
@@ -2014,6 +2052,10 @@ State:	.word DoUser	; CFA
 ToIn:	.word DoUser	; CFA
 	.word U_ToIn
 
+ Header "HoldPtr",0 ; ( -- addr )  address of HoldPtr
+HoldPtr: .word DoUser
+	.word U_HoldPtr
+
  Header "ParseLen",0 ; ( -- adr ) Push source length
 ParseLen: .word DoUser
 	.word U_ParseLen
@@ -2021,6 +2063,14 @@ ParseLen: .word DoUser
 ; Header "ParseBuf",0 ; ( -- adr ) Push source addr
 ParseBuf: .word DoUser
 	.word U_ParseBuf
+
+ Header "RandState",0 ; ( -- adr )
+	.word DoUser
+	.word U_RandState
+
+ Header "Temp0",0 ; ( -- adr ) Push addr of Temp0
+	.word DoUser
+	.word Temp0
 
  Header "Source",0 ; ( -- addr len ) current input source
 Source:	.word *+2	; CFA
@@ -2059,6 +2109,47 @@ Count:	.word *+2	; CFA
 	and #$ff
 	inc 0,x
 	jmp PushA
+
+
+ Header "Compare",0 ; ( c-addr1 u1 c-addr2 u2 -- n )  Compare 2 strings
+  ; https://forth-standard.org/standard/string/COMPARE
+Compare: .word *+2	; CFA
+@adr2	= Temp0	; addr   of string2
+@adr1	= Temp2	; addr   of string1
+@Len	= Temp4	; length of string2
+	lda 2,x			; get c-addr2
+	sta @adr2
+	lda 6,x			; get c-addr1
+	sta @adr1
+	lda 4,x			; get min(u1,u2)
+	cmp 0,x
+	bcc @1
+	lda 0,x
+@1:	sta @Len
+	phy			; save IP
+	sep #P_M
+	ldy #.loword(-1)	; for each char
+@2:	iny
+	cpy @Len		;   out of chars?
+	bcs @Out
+	lda (@adr1),y		;   compare char
+	cmp (@adr2),y
+	beq @2
+@6:	rol a			; b1,b0 = carry, 0
+	asl a
+	bra @8
+
+@Out:	rep #P_M
+	lda 0,x
+	cmp 4,x			; which string is used up?
+	bne @6
+	lda #1			; return equal
+@8:	rep #P_M
+	and #3
+	dea
+	sta 6,x			; push n
+	ply			; restore IP
+	jmp ThreeDrop+2
 
 
  .if 0
@@ -2454,5 +2545,5 @@ Last_ROM_Word = DictLink
 ; The real hardware has these vectors in the '265 Mensch monitor ROM.
 
 	.org $fffc
-	.addr FORTH_INIT ; FFFC IRQRES RES - "REStart" Interrupt
+	.addr Cold  ; FFFC IRQRES RES - "REStart" Interrupt
 
