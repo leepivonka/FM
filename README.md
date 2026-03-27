@@ -3,3 +3,5 @@ This is based on http://forum.6502.org/viewtopic.php?f=9&t=8577 with major chang
 
 The ITC & IGo files are the Indirect-threaded version.
 The STC & SGo files are the subroutine-theaded version.
+
+The .HEX files are ready for loading into the 65C265SXB RAM & executing.
