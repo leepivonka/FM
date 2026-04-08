@@ -218,6 +218,10 @@ Mid-UInt+1 1 RSHIFT 2 *                Mid-UInt+1 Is= IsEmpty
 Mid-UInt+1 2 RSHIFT 4 *                Mid-UInt+1 Is= IsEmpty
 Mid-UInt+1 1 RSHIFT Mid-UInt+1 OR 2 *  Mid-UInt+1 Is= IsEmpty
 
+5678 1234   10 UN/Mod  8 Is=  0123 Is=  4567 Is=  IsEmpty
+ba98 fedc   10 UN/Mod  8 Is=  0fed Is=  cba9 Is=  IsEmpty
+0010 fffe ffff UN/Mod  000f Is= 0000 Is= ffff Is=  IsEmpty
+
 \ Header "UM/Mod", 0 ; ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
 27c0 0009 000a UM/Mod EA60 Is= 0000 Is= IsEmpty
 
