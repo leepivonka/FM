@@ -9,12 +9,12 @@
 ;
 ; Default register conventions:
 ;	A  (16-bit) Working register / scratch
-;	X  (16-bit) Parameter Stack Pointer (PSP) - index to PStack
-;	Y  (16-bit) Instruction Pointer (IP)	  - points to next CFA
+;	X  (16-bit) Parameter Stack Pointer (PSP) - index to TOS in PStack
+;	Y  (16-bit) scratch
 ;	S  (16-bit) Return Stack Pointer (RSP)	  - hardware stack
 ;	D		Direct Page base (UP)	  points to user area
 ;	DB		Data Bank ($00)
-;	Native mode, M=16-bit, X=16-bit
+;	Native mode, P_M=16-bit, P_X=16-bit
 ;
 ; DTC execution model:
 ;	Each word start with machine code.
@@ -80,7 +80,9 @@ L2:	.byte L2-L1+flags ;flags & length of name (see F_*)
 	.addr DictLink ;link to previous word in dictionary chain
 ;		The fields above are at negative offsets from label.
 DictLink .set * ; remember the entry point of this word for later
-;label:	; CFA & nt & xt is here.  This is the address that "Search-WordList" returns.
+;		xt & nt of this word are here.
+;label:	; machine code is here.  This is the address that "Search-WordList" returns.
+;	CFA jsr (if needed) is here.
 	.endmacro
 
 DictLink .set 0 ;ptr to nt & xt of previous word, 0=end of list
@@ -109,10 +111,6 @@ U_RandState:	.res 4		; random # state
 U_IP:		.res 2		; Colon instruction Pointer
 U_User:		.res 16		; user-defined user variable space
 
-PStack:		.res 64		; parameter stack
-PSP_INIT = *-PStack	; Parameter stack initial pointer
-		.res 2		; PStack overflow
-
 ; These are in the user area so they are simpler to use.
 ; It's OK to have these as per-user even though they don't need to be.
 
@@ -123,42 +121,45 @@ Temp2:		.res 2
 Temp4:		.res 2
 Temp6:		.res 2
 
-User_Size: ; size of fixed part of user area
+			.align $10 ; make prettier listing						
+PStack:		.res 64	; Parameter stack
+PSP_Init = *-PStack	; Parameter stack initial pointer
+
+RStack:		.res 64	; Return (65816 hardware) stack
+RSP_Init	= *-1	; Return stack initial pointer
+
+UserFixedSize: ; size of fixed part of user area
+Dict_Base: ; RAM per-user dictionary starts here
 
 ;==============================================================================
- .bss
+ .bss ; uninitialized read-write
+
+TIB_Size	= $fe
+TIB_Base:	.res TIB_Size	; Terminal Input Buffer
 
 TempAbsA:	.res 2		; absolute scratch
 
-TIB_SIZE	= $fe
-TIB_Base:	.res TIB_SIZE	; Terminal Input Buffer
-
 	.align $100 ; page align direct page for best performance
-UserFirst:	.res User_Size	; 1st user area starts here
+UserFirst:	.res UserFixedSize ; 1st user area starts here
 
-ReturnStack:	.res 64
-RSP_INIT	= *-1		; Return stack initial pointer (hardware)
-
-Dict_Base: ; RAM dictionary start
 
 
 ;==============================================================================
- .code
+ .code ; read-only
 
 ;------------------------------------------------------------------------------
 Cold: ; Cold start
 
 	CLC
-	XCE		; Clear emulation bit → native mode
-
-	REP #P_M|P_X|P_D ; 16-bit registers, not decimal
+	XCE		; CPU to native mode
+	rep #P_M|P_X|P_D ; 16-bit registers, not decimal
 
 	lda #UserFirst	; Initialize User Pointer
 	tcd
 
-	LDX #PSP_INIT	; Parameter stack pointer
-	LDA #RSP_INIT
-	TAS		; Hardware (return) stack pointer
+	LDA #RSP_Init+UserFirst
+	TAS		; reset return stack
+	LDX #PSP_Init	; reset parameter stack
 
 	phk		; Set Data Bank to Code bank ($00)
 	plb
@@ -166,12 +167,12 @@ Cold: ; Cold start
 	lda #10
 	sta U_Base
 
-	stz U_State	; User area: STATE = 0
+	stz U_State	; STATE = 0
 
-	lda #Dict_Base	; User area: DP = Dict_Base
+	lda #Dict_Base+UserFirst ; DP = Dict_Base
 	sta U_DP
 
-	lda #Last_ROM_Word ; User area: LATEST = last ROM word
+	lda #Last_ROM_Word ; LATEST = last ROM word
 	sta U_Latest
 
 ;	lda #'R'	;???debug
@@ -191,7 +192,7 @@ Cold: ; Cold start
 
  Header "PSP-Reset",0 ; ( ... -- )  clear parameter stack
 PSP_Reset:
-	ldx #PSP_INIT
+	ldx #PSP_Init
 	NEXT
 
 
@@ -208,18 +209,18 @@ Zero:	dex
 Dup:	LDA PStack,X	; Load TOS
 PushA:	DEX
 	DEX
-	STA PStack,X	; Push A
+	STA PStack,x	; Push A
 	NEXT
 
 
-  Header "Drop", 0 ; ( a -- )
+ Header "Drop",0 ; ( a -- )
   ; https://forth-standard.org/standard/core/DROP
 Drop:	INX
 	INX
 	NEXT
 
 
-  Header "Swap", 0 ; ( a b -- b a )
+ Header "Swap",0 ; ( a b -- b a )
   ; https://forth-standard.org/standard/core/SWAP
 Swap:	lda PStack+0,X	; b (TOS)
 	ldy PStack+2,X	; a (NOS)
@@ -228,13 +229,13 @@ Swap:	lda PStack+0,X	; b (TOS)
 	NEXT
 
 
-  Header "Over", 0 ; ( a b -- a b a )
+ Header "Over",0 ; ( a b -- a b a )
   ; https://forth-standard.org/standard/core/OVER
 Over:	LDA PStack+2,X	; a (NOS)
 	bra PushA	; Push copy of a
 
 
-  Header "Rot", 0 ; ( a b c -- b c a )
+ Header "Rot",0 ; ( a b c -- b c a )
   ; https://forth-standard.org/standard/core/ROT
 Rot:	ldy PStack+4,X	; a (bottom)
 	LDA PStack+2,X	; b
@@ -247,10 +248,10 @@ Rot:	ldy PStack+4,X	; a (bottom)
 
  Header "Nip",0 ; ( a b -- b )
   ; https://forth-standard.org/standard/core/NIP
-Nip:	LDA PStack+0,X	; b (TOS)
+Nip:	LDA PStack,X	; b (TOS)
 NipA:	INX
 	INX
-	STA PStack+0,X	; Overwrite a with b
+	STA PStack,X	; Overwrite a with b
 	NEXT
 
 
@@ -263,7 +264,7 @@ Tuck:	lda PStack+0,X	; b
 	bra PushA	; New TOS = b
 
 
- Header "2Drop", 0 ; ( a b -- )
+ Header "2Drop",0 ; ( a b -- )
   ; https://forth-standard.org/standard/core/TwoDROP
 TwoDrop: INX
 	INX
@@ -277,28 +278,28 @@ ThreeDrop:
 	bra TwoDrop	; Drop b a, NEXT
 
 
- Header "2Dup", 0 ; ( a b -- a b a b )
+ Header "2Dup",0 ; ( a b -- a b a b )
   ; https://forth-standard.org/standard/core/TwoDUP
-TwoDup:	lda PStack+2,x
-	ldy PStack+0,x
-PushYA:	DEX
-	DEX
-	DEX
-	DEX
-	STA PStack+2,X
-	sty PStack+0,X
+TwoDup:	ldy PStack+0,x	; b
+	lda PStack+2,x	; a
+PushYA:	dex
+	dex
+	dex
+	dex
+	sta PStack+2,x
+	sty PStack+0,x
 	NEXT
 
 
- Header "2Over", 0 ; ( a b c d -- a b c d a b )
+ Header "2Over",0 ; ( a b c d -- a b c d a b )
   ; https://forth-standard.org/standard/core/TwoOVER
 TwoOver:
-	lda PStack+6,x
-	ldy PStack+4,x
+	lda PStack+6,x	; b
+	ldy PStack+4,x	; a
 	bra PushYA
 
 
- Header "2Swap", 0 ; ( a b c d -- c d a b )
+ Header "2Swap",0 ; ( a b c d -- c d a b )
   ; https://forth-standard.org/standard/core/TwoSWAP
 TwoSwap:
 	lda PStack+0,x	; swap b & d
@@ -312,10 +313,10 @@ TwoSwap:
 	NEXT
 
 
- Header "Depth", 0 ; ( -- n ) number of items on parameter stack
+ Header "Depth",0 ; ( -- n ) number of items on parameter stack
   ; https://forth-standard.org/standard/core/DEPTH
 Depth:	stx W		; save PSP
-	lda #PSP_INIT
+	lda #PSP_Init
 	sec
 	sbc W
 	LSR A		; Divide by 2 (to get cells)
@@ -331,14 +332,14 @@ Pick:	LDA PStack,X	; u
 	tax
 	lda PStack+2,x	; get cell
 	plx		; restore PSP
-	sta PStack,x	; save result
+	sta PStack+0,x	; save result
 	NEXT
 
 ;==============================================================================
 ; SECTION 2: RETURN STACK
 
 
- Header ">R", 0 ; ( a -- ) (R: -- a )  push to return stack
+ Header ">R",0 ; ( a -- ) (R: -- a )  push to return stack
   ; https://forth-standard.org/standard/core/toR
 ToR:	LDA PStack,X	; Pop from parameter stack
 	INX
@@ -356,7 +357,7 @@ TwoToR:	lda PStack+2,x	; get x1
 	jmp TwoDrop	; 2Drop
 
 
- Header "R>", 0 ; ( -- a ) (R: a -- )  pop from return stack
+ Header "R>",0 ; ( -- a ) (R: a -- )  pop from return stack
   ; https://forth-standard.org/standard/core/Rfrom
 RFrom:	PLA		; Pop from return stack
 	jmp PushA	; Push onto parameter stack
@@ -370,52 +371,75 @@ TwoRFrom:
 	jmp PushYA
 
 
- Header "R@", 0 ; ( -- a ) (R: a -- a )  get a copy of top of return stack
+ Header "R@",0 ; ( -- a ) (R: a -- a )  get a copy of top of return stack
   ; https://forth-standard.org/standard/core/RFetch
 RFetch:	lda 1,s
 	jmp PushA
 
 
-; Header "2R@",0 ; ( R: x1 x2 -- x1 x2 ) ( -- x1 x2 )  Get top 2 return stack cells
+  .if 0
+ Header "2R@",0 ; ( R: x1 x2 -- x1 x2 ) ( -- x1 x2 )  Get top 2 return stack cells
   ; https://forth-standard.org/standard/core/TwoRFetch
+TwoRFetch:
+	lda 3,s
+	jsr PushA
+	lda 1,s
+	jmp PushA
+  .endif
 
 ;==============================================================================
 ; SECTION 3: ARITHMETIC
 
 
- Header "+", 0 ; ( a b -- a+b )
+ Header "+",0 ; ( a b -- a+b )
   ; https://forth-standard.org/standard/core/Plus
 Plus:	clc
-	LDA PStack+2,X	; b
-	ADC PStack+0,X	; a + b
+	lda PStack+2,x	; get a
+	adc PStack+0,x	; add b
 	jmp NipA
 
- Header "-", 0 ; ( a b -- a-b )
+
+ Header "-",0 ; ( a b -- a-b )
   ; https://forth-standard.org/standard/core/Minus
 Minus:	sec
-	LDA PStack+2,X	; a
-	SBC PStack+0,X	; a - b
+	lda PStack+2,x	; get a
+	sbc PStack+0,x	; subtract b
 	jmp NipA
 
 
- Header "Negate", 0 ; ( n -- -n )
+ Header "Negate",0 ; ( n -- -n )
   ; https://forth-standard.org/standard/core/NEGATE
-Negate: LDA PStack+0,X
+Negate: LDA PStack,X
 Negat3:	EOR #$FFFF
 	INC A
-	STA PStack+0,X
+	STA PStack,X
 	NEXT
 
 
  Header "Abs",0 ; ( n -- |n| )
   ; https://forth-standard.org/standard/core/ABS
-Abs:	LDA PStack+0,X
+Abs:	LDA PStack,X
 	bmi Negat3
 	NEXT
 
 
-; Header "D+",0 ; ( d1 d2 -- d3 ) double precision add
-; Header "D-",0 ; ( d1 d2 -- d1-d2 ) double precision subtract
+  .if 0
+ Header "D+",0 ; ( d1 d2 -- d3 ) double precision add
+DPlus:	clc
+	lda PStack+6,x	; get d1.lo
+	adc PStack+2,x	; add d2.lo
+	sta PStack+6,x
+	lda PStack+4,x	; get d1.hi
+	adc PStack+0,x	; add d2.hi
+	sta PStack+4,x
+	jmp TwoDrop
+
+
+ Header "D-",0 ; ( d1 d2 -- d1-d2 ) double precision subtract
+DMinus: jsr DNegate
+	bra DPlus
+		   
+  .endif
 
 
  Header "DNegate",0 ; ( d1 -- -d1 )  return -d1
@@ -433,7 +457,7 @@ DNegate:
 
  Header "DAbs",0 ; ( d -- ud )  ud is the absolute value of d
   ; https://forth-standard.org/standard/double/DABS
-DAbs:	lda PStack,x	; test d sign
+DAbs:	lda PStack+0,x	; test d sign
 	bmi DNegate
 	NEXT
 
@@ -462,63 +486,63 @@ Min5:	bmi Max8
 	bra Max9
 
 
- Header "1+", 0 ; ( n -- n+1 )
+ Header "1+",0 ; ( n -- n+1 )
   ; https://forth-standard.org/standard/core/OnePlus
 OnePlus:
-	INC PStack+0,X
+	INC PStack,X
 	NEXT
 
 
  Header "2+",0 ; ( n -- n+2 )
 TwoPlus:
-	inc PStack+0,x
+	inc PStack,x
 	bra OnePlus
 
 
- Header "1-", 0 ; ( n -- n-1 )
+ Header "1-",0 ; ( n -- n-1 )
   ; https://forth-standard.org/standard/core/OneMinus
 OneMinus:
-	DEC PStack+0,X
+	DEC PStack,X
 	NEXT
 
 
- Header "2*", 0 ; ( n -- n*2 )
+ Header "2*",0 ; ( n -- n*2 )  shift left
   ; https://forth-standard.org/standard/core/TwoTimes
 TwoStar:
-	ASL PStack+0,X
+	ASL PStack,X
 	NEXT
 
 
- Header "2/", 0 ; ( n -- n/2 ) signed shift right
+ Header "2/",0 ; ( n -- n/2 ) signed shift right
   ; https://forth-standard.org/standard/core/TwoDiv
 TwoSlash:
-	LDA PStack+0,x
+	LDA PStack,x
 	asl a		; Arithmetic shift right: preserve sign bit
-	ROR PStack+0,x	; Shift right, sign bit from carry
+	ROR PStack,x	; Shift right, sign bit from carry
 	NEXT
 
 
  Header "U2/",0 ; ( u -- u/2 ) unsigned shift right
 UTwoSlash:
-	lsr PStack+0,x
+	lsr PStack,x
 	NEXT
 
 
- Header "LShift", 0 ; ( a u -- a<<u )
+ Header "LShift",0 ; ( a u -- a<<u )  shift left
   ; https://forth-standard.org/standard/core/LSHIFT
-LShift:	ldy PStack+0,x	; shift count
+LShift:	ldy PStack+0,x	; get u (shift count)
 	beq @done
-@loop:	asl PStack+2,x
+@loop:	asl PStack+2,x	; shift a
 	dey
 	bne @loop
 @done:	jmp Drop
 
 
- Header "RShift", 0 ; ( a u -- a>>u ) logical shift right
+ Header "RShift",0 ; ( a u -- a>>u ) logical shift right
   ; https://forth-standard.org/standard/core/RSHIFT
-RShift:	ldy PStack+0,x	; shift count
+RShift:	ldy PStack+0,x	; get u (shift count)
 	beq @done
-@loop:	lsr PStack+2,x
+@loop:	lsr PStack+2,x	; shift a
 	dey
 	bne @loop
 @done:	jmp Drop
@@ -526,23 +550,23 @@ RShift:	ldy PStack+0,x	; shift count
 
   .if 0
  Header "><",0 ; ( n -- n' )  Swap byte order in cell
-SwapB:	lda PStack+0,x
+SwapB:	lda PStack,x
 	xba
-	sta PStack+0,x
+	sta PStack,x
 	NEXT
    .endif
 
 
  Header "S>D",0 ; ( n -- d )  Convert the signed number n to the double-cell number d
   ; https://forth-standard.org/standard/core/StoD
-SToD:	lda PStack+0,x
-	and #$8000
+SToD:	lda PStack,x	; get n
+	and #$8000	; only sign bit
 	beq @3
 	lda #$ffff
 @3:	jmp PushA
 
 
- Header "UM*", 0 ; ( u1 u2 -- ud ) unsigned 16x16 -> 32-bit result
+ Header "UM*",0 ; ( u1 u2 -- ud ) unsigned 16x16 -> 32-bit result
   ; Result: TOS = high cell, NOS = low cell
   ; https://forth-standard.org/standard/core/UMTimes
 UMStar: lda #0		; Clear result.hi
@@ -579,7 +603,7 @@ MStar:	jsr DoCol
 	NEXT
 
 
- Header "*", 0 ; ( a b -- a*b ) 16x16 -> 16 (low word)
+ Header "*",0 ; ( a b -- a*b ) 16x16 -> 16 (low word)
   ; https://forth-standard.org/standard/core/Times
 Star:	jsr DoCol	; CFA
 	.word UMStar
@@ -608,7 +632,7 @@ UNSlashMod:
 	NEXT
 
 
- Header "UM/MOD", 0 ; ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
+ Header "UM/Mod",0 ; ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
   ; Stack: NOS_HI=ud_high NOS=ud_low TOS=u (divisor)
   ; Quotient overflow gives strange results.
   ; This is a standard 32/16 non-restoring division
@@ -661,7 +685,7 @@ SMSRem:	jsr DoCol	; CFA
 	jmp PushA
 
 
- Header "/MOD", 0 ; ( n1 n2 -- rem quot ) signed division
+ Header "/Mod",0 ; ( n1 n2 -- rem quot ) signed division
   ; Divide n1 by n2, giving the single-cell remainder n3 and the single-cell quotient n4. An
   ; ambiguous condition exists if n2 is zero. If n1 and n2 differ in sign, the implementation defined
   ; result returned will be the same as that returned by either the phrase >R S>D R>
@@ -671,7 +695,7 @@ SlashMod: jsr DoCol	; CFA
 	.word ToR,SToD,RFrom,SMSRem,Exit
 
 
- Header "/", 0 ; ( n1 n2 -- quot ) signed division
+ Header "/",0 ; ( n1 n2 -- quot ) signed division
   ; https://forth-standard.org/standard/core/Div
 Slash:	jsr DoCol	; CFA
 	.word SlashMod
@@ -679,7 +703,7 @@ Slash:	jsr DoCol	; CFA
 	.word Exit
 
 
- Header "Mod", 0 ; ( n1 n2 -- rem ) signed remainder
+ Header "Mod",0 ; ( n1 n2 -- rem ) signed remainder
   ; https://forth-standard.org/standard/core/MOD
 Mod:	jsr DoCol	; CFA
 	.word SlashMod
@@ -691,7 +715,7 @@ Mod:	jsr DoCol	; CFA
 ; SECTION 4: COMPARISON
 
 
- Header "0=",0 ; ( a -- flag )
+ Header "0=",0 ; ( n -- flag )
   ; https://forth-standard.org/standard/core/ZeroEqual
 ZeroEq:	lda PStack,X
 	bne False1
@@ -700,7 +724,7 @@ True1:	lda #$FFFF	; Drop 1, return True
 	NEXT
 
 
- Header "0<",0 ; ( a -- flag )
+ Header "0<",0 ; ( n -- flag )
   ; https://forth-standard.org/standard/core/Zeroless
 ZeroLt:	lda PStack,X
 	bmi True1
@@ -708,7 +732,7 @@ False1:	stz PStack,X	; Drop 1, return False
 	NEXT
 
 
- Header "0>",0 ; ( a -- flag )
+ Header "0>",0 ; ( n -- flag )
   ; https://forth-standard.org/standard/core/Zeromore
 ZeroGt:	lda PStack,x
 	bmi False1
@@ -716,7 +740,7 @@ ZeroGt:	lda PStack,x
 	bra False1
 
 
- Header "=", 0 ; ( a b -- flag )
+ Header "=",0 ; ( a b -- flag )
   ; https://forth-standard.org/standard/core/Equal
 Equal:	LDA PStack+0,x
 	CMP PStack+2,x
@@ -726,7 +750,7 @@ False2:	INX		; Drop
 	bra False1	; Drop, return false
 
 
- Header "<>", 0 ; ( a b -- flag )
+ Header "<>",0 ; ( a b -- flag )
   ; https://forth-standard.org/standard/core/ne
 NotEqual:
 	LDA PStack+0,X
@@ -751,8 +775,8 @@ Less3:	bmi True2	; result negative and no overflow = a<b
   ; https://forth-standard.org/standard/core/more
 Greater:
 	sec
-	lda PStack+2,x	; b
-	sbc PStack+0,x	; b - a (reversed for >)
+	lda PStack+2,x	; a
+	sbc PStack+0,x	; b
 	bvs Less3
 Greater3: bmi False2
 	bne True2
@@ -778,68 +802,68 @@ UGreater:
 ;==============================================================================
 ; SECTION 5: LOGIC
 
- Header "True", 0 ; ( -- true )
+ Header "True",0 ; ( -- true )
   ; https://forth-standard.org/standard/core/TRUE
 True:	lda #$ffff
 	jmp PushA
 
 
- Header "False", 0 ; ( -- false )
+ Header "False",0 ; ( -- false )
   ; https://forth-standard.org/standard/core/FALSE
 False:	lda #0
 	jmp PushA
 
 
- Header "And", 0 ; ( a b -- a&b )
+ Header "And",0 ; ( a b -- a&b )
   ; https://forth-standard.org/standard/core/AND
   ; Modified name to not conflict with opcode name.
-And1:	LDA PStack+0,X
-	AND PStack+2,X
+And1:	LDA PStack+2,X
+	AND PStack+0,X
 	jmp NipA
 
 
- Header "Or", 0 ; ( a b -- a|b )
+ Header "Or",0 ; ( a b -- a|b )
   ; https://forth-standard.org/standard/core/OR
   ; Modified name to not conflict with opcode name.
-Or1:	LDA PStack+0,X
-	ORA PStack+2,X
+Or1:	LDA PStack+2,X
+	ORA PStack+0,X
 	jmp NipA
 
 
- Header "Xor", 0 ; ( a b -- a^b )
+ Header "Xor",0 ; ( a b -- a^b )
   ; https://forth-standard.org/standard/core/XOR
   ; Modified name to not conflict with opcode name.
-Xor1:	LDA PStack+0,X
-	EOR PStack+2,X
+Xor1:	LDA PStack+2,X
+	EOR PStack+0,X
 	jmp NipA
 
 
- Header "Invert", 0 ; ( a -- ~a )
+ Header "Invert",0 ; ( a -- ~a )
   ; https://forth-standard.org/standard/core/INVERT
-Invert:	LDA PStack+0,X
+Invert:	LDA PStack,X
 	EOR #$FFFF
-	STA PStack+0,X
+	STA PStack,X
 	NEXT
 
 ;==============================================================================
 ; SECTION 6: MEMORY
 
 
- Header "@", 0 ; ( addr -- val ) fetch cell
+ Header "@",0 ; ( addr -- val ) fetch cell
   ; https://forth-standard.org/standard/core/Fetch
 Fetch:	lda (PStack,x)
 	sta PStack,x
 	NEXT
 
 
- Header "!", 0 ; ( val addr -- ) store cell
+ Header "!",0 ; ( val addr -- ) store cell
   ; https://forth-standard.org/standard/core/Store
 Store:	lda PStack+2,x	; get val
 	sta (PStack+0,x) ; store at addr
 	jmp TwoDrop	; drop addr val, NEXT
 
 
- Header "C@", 0 ; ( addr -- byte ) fetch byte
+ Header "C@",0 ; ( addr -- byte ) fetch byte
   ; https://forth-standard.org/standard/core/CFetch
 CFetch:	sep #P_M
 	lda (PStack,x)
@@ -849,7 +873,7 @@ CFetch:	sep #P_M
 	NEXT
 
 
- Header "C!", 0 ; ( byte addr -- ) store byte
+ Header "C!",0 ; ( byte addr -- ) store byte
   ; https://forth-standard.org/standard/core/CStore
 CStore:	LDA PStack+2,X	; get byte
 	sep #P_M	; store at addr
@@ -858,18 +882,18 @@ CStore:	LDA PStack+2,X	; get byte
 	jmp TwoDrop	; drop addr byte, NEXT
 
 
- Header "2@", 0 ; ( addr -- d ) fetch double cell
+ Header "2@",0 ; ( addr -- d ) fetch double cell
   ; (hi cell at addr, lo cell at addr+2, cells stored little-endian)
   ; https://forth-standard.org/standard/core/TwoFetch
 TwoFetch:
-	ldy PStack+0,X	; addr
+	ldy PStack,x	; addr
 	lda a:2,y	; lo cell
-	sta PStack+0,x
+	sta PStack,x
 	lda a:0,y	; hi cell
 	jmp PushA
 
 
- Header "2!", 0 ; ( d addr -- ) store double cell
+ Header "2!",0 ; ( d addr -- ) store double cell
   ; https://forth-standard.org/standard/core/TwoStore
 TwoStore:
 	ldy PStack+0,x	; addr
@@ -880,21 +904,29 @@ TwoStore:
 	jmp ThreeDrop	; 3Drop addr d, NEXT
 
 
-; Header "+!",ha_Inline ; ( n|u a-addr -- )  Add n | u to the single-cell number at a-addr
+ .if 0
+ Header "+!",ha_Inline ; ( n|u a-addr -- )  Add n | u to the single-cell number at a-addr
   ; https://forth-standard.org/standard/core/PlusStore
+PlusStore:
+	lda PStack+2,x
+	clc
+	adc (PStack+0,x)
+	sta (PStack+0,x)
+	jmp TwoDrop
+  .endif
 
 
 ; Header "?",0 ; ( a-addr -- )  Display the cell value stored at a-addr.
   ; https://forth-standard.org/standard/tools/q
 
 
- Header "CMove", 0 ; ( src dst u -- ) copy u bytes from src to dst ascending
+ Header "CMove",0 ; ( src dst u -- ) copy u bytes from src to dst ascending
   ; https://forth-standard.org/standard/core/CMOVE
 CMove:	lda PStack+0,x	; u (byte count)
 	beq @9		; Zero count = no-op
 	dec a		; decrement byte count for mvn
 	phx		; save PSP
-	ldy PStack+4,x	; prepare src
+	ldy PStack+4,x	; prefetch src
 	phy
 	ldy PStack+2,x	; Y=dst
 	plx		; X=src
@@ -903,11 +935,11 @@ CMove:	lda PStack+0,x	; u (byte count)
 @9:	jmp ThreeDrop	; Drop u dst src, NEXT
 
 
- Header "Fill", 0 ; ( caddr u byte -- ) fill u bytes starting at addr with byte
+ Header "Fill",0 ; ( caddr u byte -- ) fill u bytes starting at addr with byte
   ; https://forth-standard.org/standard/core/FILL
 Fill:	ldy PStack+2,x	; get u
 	beq @9
-	lda PStack+0,X	; byte
+	lda PStack+0,x	; byte
 	sep #P_M	; P_M= 8bit
 	sta (PStack+4,x) ; Save 1st fill byte
 	rep #P_M	; P_M= 16bit
@@ -923,18 +955,28 @@ Fill:	ldy PStack+2,x	; get u
 	plx
 @9:	jmp ThreeDrop	; Drop e u caddr, NEXT
 
-; Header "Erase",0 ; (adr u -- )  Fill with zeros
+ .if 0
+ Header "Erase",0 ; (adr u -- )  Fill with zeros
   ; https://forth-standard.org/standard/core/ERASE
+Erase:	lda #0
+EraseA:	dex
+	dex
+	sta PStack,x
+	bra Fill
 
-; Header "Blank",0 ; ( c-addr u -- )  Fill with blanks
+
+ Header "Blank",0 ; ( c-addr u -- )  Fill with blanks
   ; https://forth-standard.org/standard/string/BLANK
+Blank:	lda #' '
+	bra EraseA
+  .endif
 
 
 ;==============================================================================
 ; SECTION 7: Console I/O
 
 
- Header "XonXoff",0 ; ( -- )  Set Xon/Xoff flag on serial driver
+ Header "XonXoff",0 ; ( -- )  Set Xon/Xoff flag on M3 serial driver
 XonXoff:
 	lda #$04	; XONOFLG
 	tsb a:$43	; SFLAG3
@@ -951,7 +993,7 @@ OBuf:	lda PStack,x
 	stz a:$3a ; Mensch monitor: SOUTEND3
 	jmp Allot
    .endif
-  
+
 
   .if 0
  Header "IBuf",0 ; ( size -- )  Allocate new Mensch M3 input buffer
@@ -963,7 +1005,7 @@ IBuf:	lda PStack,x
 	stz a:$1a ; Mensch monitor: SINEND3
 	jmp Allot
    .endif
-   
+
 
   .if 0
  Header "IBufNorm",0 ; ( -- )  Revert to Mensch M3 input buffer
@@ -976,7 +1018,7 @@ IBufNorm:
 	stz a:$1a ; Mensch monitor: SINEND3
 	NEXT
    .endif
- 
+
 
  Header "Key",0 ; ( -- char ) receive character (blocking)
   ; https://forth-standard.org/standard/core/KEY
@@ -1010,7 +1052,7 @@ KeyQ:	jsr KeyQA
 	LDA #$FFFF
 @7:	jmp PushA
 
-KeyQA: ; subroutine, returns p.z, uses '265 Mensch monitor variables
+KeyQA: ; subroutine, returns P_Z, uses '265 Mensch monitor variables
 	lda a:$43 ;SFLAG3
 	and #1 ;SFLG
 	rts
@@ -1046,8 +1088,8 @@ EmitA: ; subroutine, char in A, calls '265 Mensch monitor
 	bra @1		; try again, maybe it's not full now
 
 
- Header "CR",0 ; ( -- ) emit carriage return + line feed
-  ;  c-r  https://forth-standard.org/standard/core/CR
+ Header "CR",0 ; ( -- ) emit new line
+  ; https://forth-standard.org/standard/core/CR
 CR:	jsr CRA
 	NEXT
 
@@ -1058,7 +1100,7 @@ CRA: ; subroutine
 	bra EmitA
 
 
- Header "Space",0 ; ( -- ) emit a single space
+ Header "Space",0 ; ( -- ) emit a space
   ; https://forth-standard.org/standard/core/SPACE
 Space:	jsr SpaceA
 	NEXT
@@ -1073,19 +1115,19 @@ Spaces:
 @1:	dec PStack,x	; while n>0
 	bmi @done
 	jsr SpaceA
-	bra @1
+	bra @1		;  next
 
 @done:	jmp Drop	; drop n, NEXT
 
 
  Header "Type",0 ; ( addr u -- ) transmit u characters from addr
   ; https://forth-standard.org/standard/core/TYPE
-Type:	bra @8
+Type:	bra @8		; while u!=0
 
 @1:	lda (PStack+2,x) ;   emit next char
 	jsr EmitA
-	inc PStack+2,x
-@8:	dec PStack+0,x
+	inc PStack+2,x	;   inc addr
+@8:	dec PStack+0,x	;   dec u
 	bpl @1
 	jmp TwoDrop	; Drop u addr, NEXT
 
@@ -1136,8 +1178,8 @@ Accept:	lda PStack+2,x	; save addr
 	NEXT
 
 
- Header ".Hex", 0 ; ( n -- ) Print TOS as hex
-DotHex:	LDA PStack+1,x	; do hi byte
+ Header ".Hex",0 ; ( n -- ) Print TOS as hex
+DotHex:	lda PStack+1,x	; do hi byte
 	jsr CDotHexA
 	bra CDotHex	; do lo byte
 
@@ -1212,7 +1254,7 @@ print_udec: ; subroutine: Print A as unsigned number
 	rts
 
 
- Header ".", 0 ; ( n -- ) print signed number
+ Header ".",0 ; ( n -- ) print signed number
   ; https://forth-standard.org/standard/core/d
 Dot:	lda PStack,x	; negative?
 	bpl @4
@@ -1250,7 +1292,7 @@ NextA:	dea		; jmp to (A)
  Header "Execute",0 ; ( xt -- ) execute word by execution token
   ; https://forth-standard.org/standard/core/EXECUTE
 Execute:
-	LDA PStack,X		; pop xt
+	LDA PStack,X	; pop xt
 	INX
 	INX
 	bra NextA
@@ -1283,13 +1325,13 @@ Branch: lda (U_IP)	; Fetch branch addr at IP
 ; f If xxx Then  \ if f is true then execute xxx
 ; f If xxx Else yyy Then  \ if f is true then execute xxx else execute yyy
 
- Header "If",F_Immediate ; ( -- patch_addr ) Compile an If
+ Header "If",F_Immediate ; ( -- patch_addr )  Compile an If
 If:	jsr DoCol
 	.word Lit,ZBranch,Comma	; compile ZBranch
 	.word Here		; remember patch addr
 	.word Here,Comma	; allot word
 	.word Exit
- 
+
 
 ; Header "0Branch",0 ; ( flag -- ) branch if flag is zero (compiled word)
 ZBranch:
@@ -1389,13 +1431,14 @@ Do:	jsr DoCol
 
 
  Header "Loop",F_Immediate ; ( back-addr -- )  Compile LOOP
+  ; https://forth-standard.org/standard/core/LOOP
 Loop:	jsr DoCol
 	.word Lit,@Run,Comma	; compile @Run
 	.word Comma		; compile jmp back addr
 	.word Exit
 
 
-@Run: ; ( -- ) (R: limit index -- | limit index+1)  runtie for LOOP
+@Run: ; ( -- ) (R: limit index -- | limit index+1)  runtime for LOOP
 	PLA		; index
 	INC A		; index+1
 	cmp 1,s		; limit == index+1?
@@ -1410,6 +1453,7 @@ Loop:	jsr DoCol
 
 
  Header "+Loop",F_Immediate ; ( back-addr -- )  Compile +Loop
+  ; https://forth-standard.org/standard/core/PlusLOOP
 PlusLoop: jsr DoCol
 	.word Lit,@Run,Comma	; compile @Run
 	.word Comma		; compile jmp back addr
@@ -1467,7 +1511,7 @@ J:	lda 5,s		; 2nd index
 
  Header "Here",0 ; ( -- addr ) current dictionary pointer
   ; https://forth-standard.org/standard/core/HERE
-Here:	lda U_DP	; Fetch DP
+Here:	lda U_DP
 	jmp PushA
 
 
@@ -1493,7 +1537,7 @@ Comma:	lda PStack,x	; get val
 CommaA: ; subroutine; A=val to compile
 	sta (U_DP)	; store val		
 	inc U_DP	; update DP
-CommaA3: inc U_DP
+Comma3: inc U_DP
 	lda #0		; help debugging
 	sta (U_DP)
 	rts
@@ -1507,16 +1551,16 @@ CComma:	lda PStack,x	; get byte
 
 CCommaA: ; subroutine: A=val to compile
 	sta (U_DP)	; save val
-	bra CommaA3
+	bra Comma3
 
 
- Header "Compile,",0 ; ( xt -- )  compile a call
+ Header "Compile,",0 ; ( xt -- )  Compile a call
   ; https://forth-standard.org/standard/core/COMPILEComma
 CompileComma: jsr DoCol
 	.word Comma,Exit
 
 
-; Header "Jmp,",0 ; ( xt -- )  compile a branch
+ Header "Jmp,",0 ; ( xt -- )  compile a branch
 JmpComma: jsr DoCol
 	.word Lit,Branch,Comma
 	.word Comma
@@ -1544,9 +1588,8 @@ StringComma: jsr DoCol
 	.word Exit
 
 
- Header "Header,",0 ; ( addr len cfa -- )  Compile a dictionary entry header
+ Header "Header,",0 ; ( addr len cfa -- )  Compile a word header
 HeaderComma:
-
 	ldy PStack+2,x	; compile name string
 @name1:	phy
 	lda (PStack+4,x)
@@ -1556,13 +1599,13 @@ HeaderComma:
 	dey
 	bne @name1	
 
-	lda PStack+2,x	; compile flags & length
+	lda PStack+2,x	; compile flags & length byte
 	jsr CCommaA
 
-	lda U_Latest	; compile link
+	lda U_Latest	; compile wordlist link
 	jsr CommaA
 
-	lda U_DP	; link into dictionary
+	lda U_DP	; link into wordlist chain
 	sta U_Latest
 
 	lda #$20	; compile JSR abs for CFA
@@ -1591,7 +1634,7 @@ Immediate:
 
  Header "Name>String",0 ; ( nt -- c-addr u )  Given a name token, return name as a string
   ; https://forth-standard.org/standard/tools/NAMEtoSTRING
-NameToString:		; pop nt (which is the same as xt )
+NameToString:
 	ldy PStack,x	; Y= nt
 	dey
 	dey
@@ -1724,7 +1767,7 @@ Tick:	jsr DoCol
 	.word Abort
 
 
- Header "Constant",0 ; ( "name" n -- )
+ Header "Constant",0 ; ( "name" n -- )  Define a constant word
   ; https://forth-standard.org/standard/core/CONSTANT
 Constant: jsr DoCol
 	.word Parse_Name
@@ -1739,7 +1782,7 @@ Constant: jsr DoCol
 	jmp PushA	; Push value
 
 
- Header "Variable",0 ; ( "name" -- )
+ Header "Variable",0 ; ( "name" -- )  Define a variable word
   ; https://forth-standard.org/standard/core/VARIABLE
 Variable: jsr DoCol
 	.word Create
@@ -1747,7 +1790,7 @@ Variable: jsr DoCol
 	.word Exit
 
 
- Header "Create",0 ; ( "name" -- )
+ Header "Create",0 ; ( "name" -- )  Create a word that pushes the addr of it's parameter field
   ; https://forth-standard.org/standard/core/CREATE
 Create: jsr DoCol
 	.word Parse_Name
@@ -1966,14 +2009,13 @@ Source:	lda U_ParseBuf	; push source addr
 
  Header "Decimal",0 ; ( -- )  set base to 10
   ; https://forth-standard.org/standard/core/DECIMAL
-Decimal:
-	lda #10		; User area: BASE = 10
+Decimal: lda #10		; BASE = 10
 Decim3:	sta U_Base
 	NEXT
 
  Header "Hex",0 ; ( -- )  set base to 16
   ; https://forth-standard.org/standard/core/HEX
-Hex:	lda #$10	; User area: BASE = 16
+Hex:	lda #$10	; BASE = 16
 	bra Decim3
 
 ;==============================================================================
@@ -1991,45 +2033,6 @@ Count:	lda (PStack,x)	; get length byte
 	jmp PushA
 
 
- Header "Compare",0 ; ( c-addr1 u1 c-addr2 u2 -- n )  Compare 2 strings
-  ; https://forth-standard.org/standard/string/COMPARE
-Compare:
-@adr2	= Temp0	; addr   of string2
-@adr1	= Temp2	; addr   of string1
-@Len	= Temp4	; min(length of string1, length of string2)
-	lda PStack+2,x		; get c-addr2
-	sta @adr2
-	lda PStack+6,x		; get c-addr1
-	sta @adr1
-	lda PStack+4,x		; get min(u1,u2)
-	cmp PStack+0,x
-	bcc @1
-	lda PStack+0,x
-@1:	sta @Len
-	sep #P_M
-	ldy #.loword(-1)	; for each char
-@2:	iny
-	cpy @Len		;   out of chars?
-	bcs @Out
-	lda (@adr1),y		;   compare char
-	cmp (@adr2),y
-	beq @2
-@6:	rol a			; b1,b0 = carry, 0
-	asl a
-	bra @8
-
-@Out:	rep #P_M
-	lda PStack+0,x
-	cmp PStack+4,x		; which string is used up?
-	bne @6
-	lda #1			; return equal
-@8:	rep #P_M
-	and #3
-	dea
-	sta PStack+6,x		; push n
-	jmp ThreeDrop
-
-
  .if 0
  Header "Bounds",0 ; ( addr u -- addr+u addr ) Prepare address for looping
   ; http://www.complang.tuwien.ac.at/forth/gforth/Docs-html/Memory-Blocks.html
@@ -2041,6 +2044,45 @@ Bounds:	lda PStack+0,x
 	sty PStack+0,x
 	NEXT
   .endif
+
+
+ Header "Compare",0 ; ( c-addr1 u1 c-addr2 u2 -- n )  Compare 2 strings
+  ; https://forth-standard.org/standard/string/COMPARE
+Compare:
+@adr2	= Temp0	; addr   of string2
+@adr1	= Temp2	; addr   of string1
+@Len	= Temp4	; min(length of string1, length of string2)
+	lda PStack+2,x	; get c-addr2
+	sta @adr2
+	lda PStack+6,x	; get c-addr1
+	sta @adr1
+	lda PStack+4,x	; get min(u1,u2)
+	cmp PStack+0,x
+	bcc @1
+	lda PStack+0,x
+@1:	sta @Len
+	sep #P_M
+	ldy #$ffff	; for each char
+@2:	iny
+	cpy @Len	;   out of chars?
+	bcs @Out
+	lda (@adr1),y	;   compare char
+	cmp (@adr2),y
+	beq @2
+@6:	rol a		; b1,b0 = carry, 0
+	asl a
+	bra @8
+
+@Out:	rep #P_M
+	lda PStack+0,x
+	cmp PStack+4,x	; which string is used up?
+	bne @6
+	lda #1		; return equal
+@8:	rep #P_M
+	and #3
+	dea
+	sta PStack+6,x	; push n
+	jmp ThreeDrop
 
 
 ; Header "-Trailing",0 ; ( addr n1 -- addr n2 )  trim trailing spaces
@@ -2139,7 +2181,7 @@ SkipWhite:
   ; Converts the text beginning at adr for len, with regard to Base, to a binary
   ; value that is single-length if no valid punctuation occurs, and
   ; double-length if valid punctuation does occur.  The string may contain
-  ; a preceding negative sign; adr may contain a count, which will be ignored.
+  ; a preceding negative sign.
 Number:
 @Value	= W	; value accumulator
 @Neg	= Temp0	; negative sign found flag
@@ -2148,9 +2190,9 @@ Number:
 	stz @Neg	; start positive
 	jsr @Get	; get next char
 	bmi @num_err
-	cmp #'+'
+	cmp #'+'	;  plus sign?
 	beq @loop
-	cmp #'-'
+	cmp #'-'	;  minus sign?
 	bne @2
 	dec @Neg	; set negative flag
 	
@@ -2182,9 +2224,9 @@ Number:
 	bra @loop
 
 @done:	lda @Value
-	bit @Neg	;  negative?
+	bit @Neg	; negative?
 	bpl @d4
-	eor #$ffff	;   negate
+	eor #$ffff	;  negate
 	ina
 @d4:
 	sta PStack+2,x	; Replace addr with number
@@ -2212,7 +2254,7 @@ Number:
 
  Header "Bye",0 ; ( -- ) halt the system
   ; https://forth-standard.org/standard/tools/BYE
-Bye:	jmp $00e084	; Reset
+Bye:	jmp $00e084	; Mensch Reset
 
 
  Header "Abort",0 ; ( -- ) reset stacks and go to QUIT
@@ -2227,7 +2269,7 @@ Abort:	jsr DoCol	; CFA
 	.word Quit
 
 
- Header "Quit", 0 ; ( -- ) outer interpreter loop
+ Header "Quit",0 ; ( -- ) outer interpreter loop
   ; Resets return stack, reads and interprets input forever
   ; https://forth-standard.org/standard/core/QUIT
 Quit:	jsr DoCol	; CFA
@@ -2237,7 +2279,7 @@ Quit:	jsr DoCol	; CFA
 @Loop:					; Begin
 	.word Lit,TIB_Base		;   Use terminal buffer
 	.word Dup,ParseBuf,Store
-	.word Lit,TIB_SIZE		;   push buf length
+	.word Lit,TIB_Size		;   push buf length
 	.word Accept			;   Read line
 	.word ParseLen,Store		;   save line size
 	.word Space
@@ -2253,8 +2295,8 @@ Quit:	jsr DoCol	; CFA
 
 ; Header "RSP-Reset",0 ; ( -- ) (R: ... -- ) reset the return stack pointer
 RSP_Reset:
-	LDA #RSP_INIT
-	TAS			; S= RSP_INIT
+	LDA #RSP_Init+UserFirst
+	TAS			; S= RSP_Init
 	NEXT
 
 
@@ -2307,7 +2349,7 @@ Interpret: jsr DoCol	; CFA
 	.word Exit
 
 @CheckStack:
-	cpx #PSP_INIT+1
+	cpx #PSP_Init+1
 	bcs @CS_Err
 	NEXT
 
@@ -2347,7 +2389,7 @@ SemiCode: jsr DoCol
 	.word Exit
 
 
- Header ":", 0 ; ( "name" -- )  start compiling a new colon word
+ Header ":",0 ; ( "name" -- )  start compiling a new colon word
   ; https://forth-standard.org/standard/core/Colon
 Colon:	jsr DoCol
 	.word Parse_Name	; get name  ( caddr len )
@@ -2401,7 +2443,7 @@ DotS:	jsr DoCol
 	.word Exit
 
 @List:			; Print each element
-	lda #PSP_INIT	; for each cell
+	lda #PSP_Init	; for each cell
 @loop:	sta Temp0	;   done?
 	cpx Temp0
 	bcs @done
