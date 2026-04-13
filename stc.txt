@@ -1541,11 +1541,20 @@ LdImmComma:
 
 
  Header "Literal",F_Immediate ; ( n -- )  Compile inline constant
+  ; https://forth-standard.org/standard/core/LITERAL
 Literal:
 	jsr LdImmComma		; compile lda #
 	lda #PushA		; compile jsr PushA
 	bra CompileCommaA
 
+
+ Header "[Char]",F_Immediate ; ( "c" -- n )  compile char literal
+  ; https://forth-standard.org/standard/core/BracketCHAR
+BChar:	jsr Parse_Name	; get c
+	inx		; drop length
+	inx
+	jsr CFetch
+	bra Literal
 
 
 ; Header "String,",0  ; ( caddr len -- ) compile string
@@ -2156,32 +2165,66 @@ Number:
 @Value	= W	; value accumulator
 @Neg	= Temp0	; negative sign found flag
 @Digit	= Temp2
+@Base	= Temp4	; current numeric base
 	stz @Value	; Value= 0
 	stz @Neg	; start positive
-	jsr @Get	; get next char
-	bmi @num_err
+	lda U_Base	; default to system base
+	sta @Base
+	jsr @Get	; get 1st char
+	bmi @err
 	cmp #'+'	;  plus sign?
-	beq @loop
+	beq @38
 	cmp #'-'	;  minus sign?
-	bne @2
+	bne @39
 	dec @Neg	; set negative flag
+@38:	jsr @Get	; get next char
+	bmi @err
+@39:
+	ldy #10		; decimal?
+	cmp #'&'
+	beq @SetBase
+	cmp #'#'
+	beq @SetBase
+	ldy #2		; binary?
+	cmp #'%'
+	beq @SetBase
+	ldy #16		; hexadecimal?
+	cmp #'$'
+	beq @SetBase
+	cmp #$27	; (apostrophe) character?
+	bne @2
+	jsr @Get	;  get char
+	bmi @err
+	sta @Value
+	jsr @Get	; get trailing "'"
+	bmi @done
+	cmp #$27
+	beq @done
+	bra @err
+
+@err:	stz PStack+2,x	; return fail
+	inx		; Drop len
+	inx
+	rts
+
+@SetBase: sty @Base	; set temp base
 @loop:	jsr @Get	; get next char
 	bmi @done
 @2:
 	sec		; get ASCII digit value
 	sbc #'0'
-	bcc @num_err
+	bcc @err
 	CMP #10
 	bcc @ok
 	sbc #7
 	and #$df
 	CMP #10
-	bcc @num_err
-@ok:	CMP U_Base
-	bcs @num_err
+	bcc @err
+@ok:	cmp @Base
+	bcs @err
 
 	sta @Digit	; WB = W * BASE + digit
-	ldy U_Base
+	ldy @Base
 	lda #0
 @mul2:	clc
 	adc @Value
@@ -2201,12 +2244,6 @@ Number:
 	sta PStack+2,x	; Replace addr with number
 	lda #.loword(-1) ; return success
 	sta PStack+0,x
-	rts
-
-@num_err:
-	stz PStack+2,x	; return fail
-	inx		; Drop len
-	inx
 	rts
 
 @Get: ; get next char in A, P_M= end of string
@@ -2371,24 +2408,27 @@ Semicolon:
 
  Header "Dump",0 ; ( caddr len -- )  Dump memory in hex
   ; https://forth-standard.org/standard/tools/DUMP
-Dump:	dec PStack+0,x	; so we stop on zero length remaining
-@line:	jsr CR
+Dump:	dec PStack+0,x
+	lda #0
+@line:	pha
+	jsr CR
 	jsr Over	; print addr
 	jsr DotHex
-	ldy #16		; for 16 bytes
-@byte:	phy
+	pla
+@byte:	pha
 	jsr Space	;   print space
 	lda (PStack+2,x) ;   get byte
-	inc PStack+2,x
-	dec PStack+0,x
 	jsr CDotHexA	;   print byte
-	ply		;  next
-	dey
+	inc PStack+2,x
+	pla
+	dec PStack+0,x
+	bmi @done
+	ina
+	bit #$f
 	bne @byte
+	bra @line
 
-	lda PStack+0,x	; until done
-	bpl @line
-	jmp TwoDrop
+@done:	jmp TwoDrop
 
 
  Header ".S",0 ; ( -- ) print stack contents non-destructively
