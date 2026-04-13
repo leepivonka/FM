@@ -2161,6 +2161,7 @@ SkipWhite:
   ; value that is single-length if no valid punctuation occurs, and
   ; double-length if valid punctuation does occur.  The string may contain
   ; a preceding negative sign.
+  ; https://gforth.org/manual/Number-Conversion.html
 Number:
 @Value	= W	; value accumulator
 @Neg	= Temp0	; negative sign found flag
@@ -2172,14 +2173,6 @@ Number:
 	sta @Base
 	jsr @Get	; get 1st char
 	bmi @err
-	cmp #'+'	;  plus sign?
-	beq @38
-	cmp #'-'	;  minus sign?
-	bne @39
-	dec @Neg	; set negative flag
-@38:	jsr @Get	; get next char
-	bmi @err
-@39:
 	ldy #10		; decimal?
 	cmp #'&'
 	beq @SetBase
@@ -2192,7 +2185,7 @@ Number:
 	cmp #'$'
 	beq @SetBase
 	cmp #$27	; (apostrophe) character?
-	bne @2
+	bne @NotBase
 	jsr @Get	;  get char
 	bmi @err
 	sta @Value
@@ -2200,7 +2193,6 @@ Number:
 	bmi @done
 	cmp #$27
 	beq @done
-	bra @err
 
 @err:	stz PStack+2,x	; return fail
 	inx		; Drop len
@@ -2208,6 +2200,15 @@ Number:
 	rts
 
 @SetBase: sty @Base	; set temp base
+	jsr @Get	; get next char
+	bmi @err
+@NotBase:
+	cmp #'+'	;  plus sign?
+	beq @loop
+	cmp #'-'	;  minus sign?
+	bne @2
+	dec @Neg	; set negative flag
+
 @loop:	jsr @Get	; get next char
 	bmi @done
 @2:

@@ -1,5 +1,6 @@
 \ FM FORTH tests
 \ Some test adapted from https://forth-standard.org
+\ https://forth-standard.org/standard/testsuite
 
 PSP-Reset   \ clear parm stack
 : IsEmpty ( -- )  Depth Abort" Stack not empty"  ;  IsEmpty
@@ -17,6 +18,23 @@ ffff Constant 1S	  IsEmpty  1S  ffff Is= IsEmpty
 7fff Constant Mid-UInt 
 8000 Constant Mid-UInt+1  IsEmpty  Mid-UInt+1 8000 Is= IsEmpty
 ffff Constant Max-UInt 
+
+Decimal  IsEmpty
+#1289  1289 Is= IsEmpty
+\ #12346789.  -> 12346789.   }T
+#-1289 -1289 Is= IsEmpty
+\ T{ #-12346789. -> -12346789.  }T
+$12eF 4847 Is= IsEmpty
+\ T{ $12aBcDeF.  -> 313249263.  }T
+$-12eF -4847 Is= IsEmpty
+\ T{ $-12AbCdEf. -> -313249263. }T
+%10010110  150 Is= IsEmpty
+\ %10010110.  -> 150.        }T
+%-10010110  -150 Is= IsEmpty
+\ T{ %-10010110. -> -150.       }T
+'z' 122 Is= IsEmpty
+
+Hex
 
 \ ---- Parm Stack ----------------------------------------------
 
