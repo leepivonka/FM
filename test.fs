@@ -2,36 +2,48 @@
 \ Some test adapted from https://forth-standard.org
 \ https://forth-standard.org/standard/testsuite
 
-PSP-Reset   \ clear parm stack
+1 2 3  PSP-Reset  \ clear parm stack
 : IsEmpty ( -- )  Depth Abort" Stack not empty"  ;  IsEmpty
 : Is= ( a b -- )  <> Abort" Mismatch!" ;  IsEmpty
 : Is2= ( da db -- )  Rot <> >R <> R> Or Abort" 2Mismatch!" ;  IsEmpty
 
 Hex  IsEmpty   \ numbers in hex
 
-   0 Constant 0S	  IsEmpty  0S     0 Is= IsEmpty 
-ffff Constant 1S	  IsEmpty  1S  ffff Is= IsEmpty
-8000 Constant MSB
-7fff Constant Max-Int 
-8000 Constant Min-Int 
-   0 Constant Min-UInt 
-7fff Constant Mid-UInt 
-8000 Constant Mid-UInt+1  IsEmpty  Mid-UInt+1 8000 Is= IsEmpty
-ffff Constant Max-UInt 
+       0 Constant 0S	  IsEmpty  0S     0 Is= IsEmpty 
+0 Invert Constant 1S	  IsEmpty  1S $ffff Is= IsEmpty
+    8000 Constant MSB     IsEmpty MSB $8000 Is= IsEmpty
+       0 Constant Min-UInt 
+
+0 Invert          Constant Max-UInt   IsEmpty Max-UInt ffff Is= IsEmpty
+0 Invert 1 RSHIFT Constant Max-Int    IsEmpty Max-Int 7fff Is= IsEmpty
+0 Invert 1 RSHIFT Invert Constant Min-Int  IsEmpty Min-Int 8000 Is= IsEmpty
+0 Invert 1 RSHIFT Constant Mid-UInt   IsEmpty Mid-UInt 7fff Is= IsEmpty
+0 Invert 1 RSHIFT Invert Constant Mid-UInt+1  IsEmpty Mid-UInt+1 8000 Is= IsEmpty
+
+0S Constant <FALSE>
+1S Constant <TRUE>
+
+MAX-INT 2/ Constant Hi-Int \ 001...1
+MIN-INT 2/ Constant Lo-Int \ 110...1
+
+ 1S MAX-INT 2Constant Max-2Int \ 01...1
+  0 MIN-INT 2Constant Min-2Int \ 10...0
+MAX-2INT 2/ 2Constant Hi-2Int \ 001...1
+MIN-2INT 2/ 2Constant Lo-2Int \ 110...0
 
 Decimal  IsEmpty
 #1289  1289 Is= IsEmpty
-\ #12346789.  -> 12346789.   }T
+#12346789.  12346789. Is2= IsEmpty
 #-1289 -1289 Is= IsEmpty
-\ T{ #-12346789. -> -12346789.  }T
+#-12346789. -12346789. Is2= IsEmpty
 $12eF 4847 Is= IsEmpty
-\ T{ $12aBcDeF.  -> 313249263.  }T
+$12aBcDeF.  313249263. Is2= IsEmpty
 $-12eF -4847 Is= IsEmpty
-\ T{ $-12AbCdEf. -> -313249263. }T
+$-12AbCdEf. -313249263. Is2= IsEmpty
 %10010110  150 Is= IsEmpty
-\ %10010110.  -> 150.        }T
+%10010110.  150. Is2= IsEmpty
 %-10010110  -150 Is= IsEmpty
-\ T{ %-10010110. -> -150.       }T
+%-10010110. -150. Is2= IsEmpty
 'z' 122 Is= IsEmpty
 
 Hex
@@ -45,7 +57,7 @@ Hex
 1234 Dup 1234 Is= 1234 Is= IsEmpty
 
 \ Header "Drop", 0 ; ( a -- )
-2345 Drop IsEmpty
+3456 2345 Drop 3456 Is= IsEmpty
 
 \ Header "Swap", 0 ; ( a b -- b a )
 3456 4567 Swap 3456 Is= 4567 Is= IsEmpty
@@ -68,6 +80,9 @@ Hex
 \ Header "2Dup", 0 ; ( a b -- a b a b )
 1234 2345 3456 2Dup 2345 3456 Is2=  2345 3456 Is2= 1234 Is= IsEmpty
 
+\ Header "2Nip",0 ; ( da db -- db )
+1234 2345 3456 4567 2Nip  45673456. Is2= IsEmpty
+
 \ Header "2Over", 0 ; ( a b c d -- a b c d a b )
 1234 2345 3456 4567 5678 2Over 2345 3456 Is2=  4567 5678 Is2= 2345 3456 Is2=  1234 Is= IsEmpty
 
@@ -89,8 +104,19 @@ Hex
   1221 >R 2332 >R IsEmpty
   R@ 2332 Is= IsEmpty
   R> 2332 Is= R> 1221 Is= IsEmpty
-  ;  IsEmpty
+  ;  IsEmpty  SeeLatest
 TestR1 IsEmpty
+
+\ Header "2>R",0 ; ( x1 x2 -- ) ( R: -- x1 x2 )  move cell pair to return stack
+\ Header "2R@",0 ; ( R: x1 x2 -- x1 x2 ) ( -- x1 x2 )  Get top 2 return stack cells
+\ Header "2R>",0 ; ( R: x1 x2 -- ) ( -- x1 x2 )  Pop 2 cells from the return stack
+: TestR2 ( -- )
+  12345678. 2>R 23456789. 2>R IsEmpty
+  2R@ 23456789. Is2= IsEmpty
+  2R> 23456789. Is2= 2R> 12345678. Is2= IsEmpty
+  ;  IsEmpty  SeeLatest
+TestR2 IsEmpty
+
 
 \ ------------ Arithmetic -------------------
 
@@ -108,24 +134,103 @@ ffe0 Negate 0020 Is= IsEmpty
 ffe0 Abs 0020 Is= IsEmpty
 00e0 Abs 00E0 Is= IsEmpty
 
+\  Header "D+",0 ; ( d1 d2 -- d3 ) double precision add
+   0.    5. D+     5. Is2= IsEmpty     \ small integers
+  -5.    0. D+    -5. Is2= IsEmpty
+   1.    2. D+     3. Is2= IsEmpty
+   1.   -2. D+    -1. Is2= IsEmpty
+  -1.    2. D+     1. Is2= IsEmpty
+  -1.   -2. D+    -3. Is2= IsEmpty
+  -1.    1. D+     0. Is2= IsEmpty
+ 0  0  0  5 D+   0  5 Is2= IsEmpty     \ mid range integers
+-1  5  0  0 D+  -1  5 Is2= IsEmpty
+ 0  0  0 -5 D+   0 -5 Is2= IsEmpty
+ 0 -5 -1  0 D+  -1 -5 Is2= IsEmpty
+ 0  1  0  2 D+   0  3 Is2= IsEmpty
+-1  1  0 -2 D+  -1 -1 Is2= IsEmpty
+ 0 -1  0  2 D+   0  1 Is2= IsEmpty
+ 0 -1 -1 -2 D+  -1 -3 Is2= IsEmpty
+-1 -1  0  1 D+  -1  0 Is2= IsEmpty
+
+ MIN-INT 0 2DUP D+  0 1 Is2= IsEmpty
+ MIN-INT S>D MIN-INT 0 D+  0 0 Is2= IsEmpty
+
+  HI-2INT       1. D+  0 HI-INT 1+ Is2= IsEmpty    \ large double integers
+  HI-2INT     2DUP D+  1S 1- MAX-INT Is2= IsEmpty
+ MAX-2INT MIN-2INT D+  -1. Is2= IsEmpty
+ MAX-2INT  LO-2INT D+  HI-2INT Is2= IsEmpty
+  LO-2INT     2DUP D+  MIN-2INT Is2= IsEmpty
+  HI-2INT MIN-2INT D+ 1. D+  LO-2INT Is2= IsEmpty
+
+\  Header "D-",0 ; ( d1 d2 -- d1-d2 ) double precision subtract
+  0.  5. D- -5. Is2= IsEmpty              \ small integers
+  5.  0. D-  5. Is2= IsEmpty
+  0. -5. D-  5. Is2= IsEmpty
+  1.  2. D- -1. Is2= IsEmpty
+  1. -2. D-  3. Is2= IsEmpty
+ -1.  2. D- -3. Is2= IsEmpty
+ -1. -2. D-  1. Is2= IsEmpty
+ -1. -1. D-  0. Is2= IsEmpty
+  0  0  0  5 D-  0 -5 Is2= IsEmpty       \ mid-range integers
+ -1  5  0  0 D- -1  5 Is2= IsEmpty
+  0  0 -1 -5 D-  1  4 Is2= IsEmpty
+  0 -5  0  0 D-  0 -5 Is2= IsEmpty
+ -1  1  0  2 D- -1 -1 Is2= IsEmpty
+  0  1 -1 -2 D-  1  2 Is2= IsEmpty
+  0 -1  0  2 D-  0 -3 Is2= IsEmpty
+  0 -1  0 -2 D-  0  1 Is2= IsEmpty
+  0  0  0  1 D-  0 -1 Is2= IsEmpty
+ MIN-INT 0 2DUP D- 0. Is2= IsEmpty
+ MIN-INT S>D MAX-INT 0 D- 1 1s Is2= IsEmpty
+ MAX-2INT max-2INT D- 0. Is2= IsEmpty    \ large integers
+ MIN-2INT min-2INT D- 0. Is2= IsEmpty
+ MAX-2INT  hi-2INT D- lo-2INT DNEGATE Is2= IsEmpty
+  HI-2INT  lo-2INT D- max-2INT Is2= IsEmpty
+  LO-2INT  hi-2INT D- min-2INT 1. D+ Is2= IsEmpty
+ MIN-2INT min-2INT D- 0. Is2= IsEmpty
+ MIN-2INT  lo-2INT D-  lo-2INT Is2= IsEmpty
+
+\ Header "DNegate",0 ; ( d1 -- -d1 )  return -d1
+5678 1234 DNegate edcb Is= a988 Is= IsEmpty
+       0. DNegate   0. Is2= IsEmpty
+       1. DNegate  -1. Is2= IsEmpty
+      -1. DNegate   1. Is2= IsEmpty
+ max-2int DNegate  min-2int SWAP 1+ SWAP Is2= IsEmpty
+ min-2int Swap 1+ Swap DNegate  max-2int Is2= IsEmpty
+
+\  Header "M+",0 ; ( d1 n -- d2 )  Add signed single to double
+ HI-2INT   1 M+  HI-2INT   1. D+ Is2= IsEmpty
+ MAX-2INT -1 M+  MAX-2INT -1. D+ Is2= IsEmpty
+ MIN-2INT  1 M+  MIN-2INT  1. D+ Is2= IsEmpty
+ LO-2INT  -1 M+  LO-2INT  -1. D+ Is2= IsEmpty
+
+\ Header "DAbs",0 ; ( d -- ud )  ud is the absolute value of d
+a988 edcb DAbs 1234 Is= 5678 Is= IsEmpty
+5678 1234 DAbs 1234 Is= 5678 Is= IsEmpty
+       1. DAbs  1.       Is2= IsEmpty
+      -1. DAbs  1.       Is2= IsEmpty
+ MAX-2INT DAbs  MAX-2INT Is2= IsEmpty
+ MIN-2INT 1. D+ DAbs  MAX-2INT Is2= IsEmpty
+
 \ Header "1+", 0 ; ( n -- n+1 )
 1032 1+ 1033 Is= IsEmpty
+12ff 1+ 1300 Is= IsEmpty
 
 \ Header "2+",0 ; ( n -- n+2 )
 12ff 2+ 1301 Is= IsEmpty
 
 \ Header "1-", 0 ; ( n -- n-1 )
 0537 1- 0536 Is= IsEmpty
+1300 1- 12ff Is= IsEmpty
 
 \ Header "2*", 0 ; ( n -- n*2 )  shift left
 0537 2* 0A6E Is= IsEmpty
 
-\ Header "DNegate",0 ; ( d1 -- -d1 )  return -d1
-5678 1234 DNegate edcb Is= a988 Is= IsEmpty
-
-\ Header "DAbs",0 ; ( d -- ud )  ud is the absolute value of d
-a988 edcb DAbs 1234 Is= 5678 Is= IsEmpty
-5678 1234 DAbs 1234 Is= 5678 Is= IsEmpty
+\ Header "D2*",0 ; ( d -- d*2 )  double shift left\
+              0. D2*  0.  Is2= IsEmpty
+ MIN-INT       0 D2*  0 1 Is2= IsEmpty
+         HI-2INT D2*  MAX-2INT 1. D- Is2= IsEmpty
+         LO-2INT D2*  MIN-2INT Is2= IsEmpty
 
 \ Header "Max",0 ; ( a b -- max )  signed
    0032    1032 Max     1032 Is= IsEmpty
@@ -177,6 +282,18 @@ fedc 2/ ff6e Is= IsEmpty
 0537 U2/ 029B Is= IsEmpty
 fedc U2/ 7f6e Is= IsEmpty
 
+\ Header "D2/",0 ; ( d -- d/2 ) signed shift right
+       0. D2/  0.        Is2= IsEmpty
+       1. D2/  0.        Is2= IsEmpty
+      0 1 D2/  MIN-INT 0 Is2= IsEmpty
+ MAX-2INT D2/  HI-2INT   Is2= IsEmpty
+      -1. D2/  -1.       Is2= IsEmpty
+ MIN-2INT D2/  LO-2INT   Is2= IsEmpty
+
+\ Header "DU2/",F_Inline ; ( ud -- ud/2 ) unsigned shift right
+87654321. DU2/  43b2a190. Is2= IsEmpty
+76543210. DU2/  3b2a1908. Is2= IsEmpty
+
 \ Header "LShift",0 ; ( a u -- a<<u ) logical shift left
 1234 4 LShift 2340 Is= IsEmpty
 
@@ -186,6 +303,16 @@ fedc U2/ 7f6e Is= IsEmpty
 \ Header "S>D",0 ; ( n -- d )  Convert the signed number n to the double-cell number d
 1234 S>D 0000 Is= 1234 Is= IsEmpty
 fedc S>D ffff Is= fedc Is= IsEmpty
+
+\ Header "U>D",0 ; ( u -- ud )  Convert the unsigned number n to the double-cell number d
+1234 U>D 0000 Is= 1234 Is= IsEmpty
+fedc U>D 0000 Is= fedc Is= IsEmpty
+
+\ Header "D>S",0 ; ( d -- s )  Convert double to single
+    1234  0 D>S   1234   Is= IsEmpty
+   -1234 -1 D>S  -1234   Is= IsEmpty
+ MAX-INT  0 D>S  MAX-INT Is= IsEmpty
+ MIN-INT -1 D>S  MIN-INT Is= IsEmpty
 
 \ Header "UM*",0 ; ( u1 u2 -- ud ) unsigned 16x16 -> 32-bit result
       1025        255 UM* 0025 Is= A649 Is= IsEmpty
@@ -200,6 +327,9 @@ Mid-UInt+1          2 UM*  1 Is=           0 Is= IsEmpty
 Mid-UInt+1          4 UM*  2 Is=           0 Is= IsEmpty
         1S          2 UM*  1 Is=  1S 1 LShift Is= IsEmpty
   Max-UInt   Max-UInt UM*  1 Invert Is= 1 Is= IsEmpty
+
+\ Header "UN*",0 ; ( ud1 u2 -- ud3 ) unsigned 32x16 -> 32-bit result
+9876543. 0a UN*  5f49f49e. Is2= IsEmpty
 
 \ Header "M*",0 ; ( a b -- dc ) 16x16 -> 32 signed
       0       0 M*        0 S>D Is2= IsEmpty
@@ -219,7 +349,7 @@ Mid-UInt+1          4 UM*  2 Is=           0 Is= IsEmpty
       2 Max-Int M*  Max-Int      1 LSHIFT 0 Is2= IsEmpty
 Min-Int Min-Int M*        0 MSB 1 RSHIFT   Is2= IsEmpty
 Max-Int Min-Int M*      MSB MSB 2/         Is2= IsEmpty
-Max-Int Max-Int M*        1 MSB 2/ INVERT  Is2= IsEmpty
+Max-Int Max-Int M*        1 MSB 2/ Invert  Is2= IsEmpty
 
 \ Header "*", 0 ; ( a b -- a*b ) 16x16 -> 16 (low word)
 1025 0014 * 42E4 Is= IsEmpty
@@ -236,12 +366,22 @@ Mid-UInt+1 1 RSHIFT 2 *                Mid-UInt+1 Is= IsEmpty
 Mid-UInt+1 2 RSHIFT 4 *                Mid-UInt+1 Is= IsEmpty
 Mid-UInt+1 1 RSHIFT Mid-UInt+1 OR 2 *  Mid-UInt+1 Is= IsEmpty
 
+\ Header "UN/Mod",0 ; ( ud u -- udq ur )  unsigned 32/16 -> 32 quotient, 16 remainder
 5678 1234   10 UN/Mod  8 Is=  0123 Is=  4567 Is=  IsEmpty
 ba98 fedc   10 UN/Mod  8 Is=  0fed Is=  cba9 Is=  IsEmpty
 0010 fffe ffff UN/Mod  000f Is= 0000 Is= ffff Is=  IsEmpty
+5f49f4a0.   0a UN/Mod  2 Is= 9876543. Is2= IsEmpty
 
 \ Header "UM/Mod", 0 ; ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
-27c0 0009 000a UM/Mod EA60 Is= 0000 Is= IsEmpty
+    27c0         0009     000a UM/Mod      EA60 Is=    0 Is= IsEmpty
+       0            0        1 UM/MOD         0 Is=    0 Is= IsEmpty
+       1            0        1 UM/MOD         1 Is=    0 Is= IsEmpty
+       1            0        2 UM/MOD         0 Is=    1 Is= IsEmpty
+       3            0        2 UM/MOD         1 Is=    1 Is= IsEmpty
+MAX-UINT        2 UM*        2 UM/MOD  Max-UInt Is=    0 Is= IsEmpty
+MAX-UINT        2 UM* MAX-UINT UM/MOD         2 Is=    0 Is= IsEmpty
+MAX-UINT MAX-UINT UM* MAX-UINT UM/MOD  Max-UInt Is=    0 Is= IsEmpty
+    ffff         fffd     ffff UM/Mod      fffe Is= fffd Is= IsEmpty
 
 \ Header "SM/Rem ",0 ; ( d1 n1 -- n_remainder n_quotient )  Symmetric signed division
        0 S>D              1 SM/Rem         0 Is=  0 Is= IsEmpty
@@ -275,7 +415,7 @@ ba98 fedc   10 UN/Mod  8 Is=  0fed Is=  cba9 Is=  IsEmpty
  Min-Int  Max-Int  M* Max-Int  SM/Rem   Min-Int  Is=  0 Is= IsEmpty
  Max-Int  Max-Int  M* Max-Int  SM/Rem   Max-Int  Is=  0 Is= IsEmpty
 
-\ Header "/MOD", 0 ; ( n1 n2 -- rem quot ) signed division
+\ Header "/Mod", 0 ; ( n1 n2 -- rem quot ) signed division
 7fff 0a /Mod 0CCC Is= 0007 Is= IsEmpty
 
 \ Header "/", 0 ; ( n1 n2 -- quot ) signed division
@@ -382,13 +522,85 @@ Mid-UInt         0 U> True  Is= IsEmpty
 Max-UInt         0 U> True  Is= IsEmpty
 Max-UInt  Mid-UInt  U> True  Is= IsEmpty
 
+\ Header "D0=",0 ; ( d -- flag )
+               1. D0=  <FALSE> Is= IsEmpty
+ MIN-INT        0 D0=  <FALSE> Is= IsEmpty
+         MAX-2INT D0=  <FALSE> Is= IsEmpty
+      -1  MAX-INT D0=  <FALSE> Is= IsEmpty
+               0. D0=  <TRUE>  Is= IsEmpty
+              -1. D0=  <FALSE> Is= IsEmpty
+       0  MIN-INT D0=  <FALSE> Is= IsEmpty
+
+\ Header "D0<",0 ; ( d -- flag )
+                0. D0<  <FALSE> Is= IsEmpty
+                1. D0<  <FALSE> Is= IsEmpty
+  MIN-INT        0 D0<  <FALSE> Is= IsEmpty
+        0  MAX-INT D0<  <FALSE> Is= IsEmpty
+          MAX-2INT D0<  <FALSE> Is= IsEmpty
+               -1. D0<  <TRUE>  Is= IsEmpty
+          MIN-2INT D0<  <TRUE>  Is= IsEmpty
+
+\ Header "D=",0 ; ( d1 d2 -- flag ) double equal
+      -1.      -1. D=  <TRUE>  Is= IsEmpty
+      -1.       0. D=  <FALSE> Is= IsEmpty
+      -1.       1. D=  <FALSE> Is= IsEmpty
+       0.      -1. D=  <FALSE> Is= IsEmpty
+       0.       0. D=  <TRUE>  Is= IsEmpty
+       0.       1. D=  <FALSE> Is= IsEmpty
+       1.      -1. D=  <FALSE> Is= IsEmpty
+       1.       0. D=  <FALSE> Is= IsEmpty
+       1.       1. D=  <TRUE>  Is= IsEmpty
+   0   -1    0  -1 D=  <TRUE>  Is= IsEmpty
+   0   -1    0   0 D=  <FALSE> Is= IsEmpty
+   0   -1    0   1 D=  <FALSE> Is= IsEmpty
+   0    0    0  -1 D=  <FALSE> Is= IsEmpty
+   0    0    0   0 D=  <TRUE>  Is= IsEmpty
+   0    0    0   1 D=  <FALSE> Is= IsEmpty
+   0    1    0  -1 D=  <FALSE> Is= IsEmpty
+   0    1    0   0 D=  <FALSE> Is= IsEmpty
+   0    1    0   1 D=  <TRUE>  Is= IsEmpty
+ MAX-2INT MIN-2INT D=  <FALSE> Is= IsEmpty
+ MAX-2INT       0. D=  <FALSE> Is= IsEmpty
+ MAX-2INT MAX-2INT D=  <TRUE>  Is= IsEmpty
+ MAX-2INT HI-2INT  D=  <FALSE> Is= IsEmpty
+ MAX-2INT MIN-2INT D=  <FALSE> Is= IsEmpty
+ MIN-2INT MIN-2INT D=  <TRUE>  Is= IsEmpty
+ MIN-2INT LO-2INT  D=  <FALSE> Is= IsEmpty
+ MIN-2INT MAX-2INT D=  <FALSE> Is= IsEmpty
+
+\ Header "DU<",0 ; ( ud1 ud2 -- flag )
+       1.       1. DU<  <FALSE> Is= IsEmpty
+       1.      -1. DU<  <TRUE>  Is= IsEmpty
+      -1.       1. DU<  <FALSE> Is= IsEmpty
+      -1.      -2. DU<  <FALSE> Is= IsEmpty
+ MAX-2INT  HI-2INT DU<  <FALSE> Is= IsEmpty
+  HI-2INT MAX-2INT DU<  <TRUE>  Is= IsEmpty
+ MAX-2INT MIN-2INT DU<  <TRUE>  Is= IsEmpty
+ MIN-2INT MAX-2INT DU<  <FALSE> Is= IsEmpty
+ MIN-2INT  LO-2INT DU<  <TRUE>  Is= IsEmpty
+
+\ Header "D<",0 ; ( d1 d2 -- flag )
+       0.       1. D<  <TRUE>  Is= IsEmpty
+       0.       0. D<  <FALSE> Is= IsEmpty
+       1.       0. D<  <FALSE> Is= IsEmpty
+      -1.       1. D<  <TRUE>  Is= IsEmpty
+      -1.       0. D<  <TRUE>  Is= IsEmpty
+      -2.      -1. D<  <TRUE>  Is= IsEmpty
+      -1.      -2. D<  <FALSE> Is= IsEmpty
+      -1. MAX-2INT D<  <TRUE>  Is= IsEmpty
+ MIN-2INT MAX-2INT D<  <TRUE>  Is= IsEmpty
+ MAX-2INT      -1. D<  <FALSE> Is= IsEmpty
+ MAX-2INT MIN-2INT D<  <FALSE> Is= IsEmpty
+ MAX-2INT 2DUP -1. D+ D<  <FALSE> Is= IsEmpty
+ MIN-2INT 2DUP  1. D+ D<  <TRUE>  Is= IsEmpty
+
 \ Header "And", 0 ; ( a b -- a&b )
 0        0 AND   0  Is= IsEmpty
 0        1 AND   0  Is= IsEmpty
 1        0 AND   0  Is= IsEmpty
 1        1 AND   1  Is= IsEmpty
-0 INVERT 1 AND   1  Is= IsEmpty
-1 INVERT 1 AND   0  Is= IsEmpty
+0 Invert 1 AND   1  Is= IsEmpty
+1 Invert 1 AND   0  Is= IsEmpty
 0S      0S AND  0S  Is= IsEmpty
 0S      1S AND  0S  Is= IsEmpty
 1S      0S AND  0S  Is= IsEmpty
@@ -415,7 +627,7 @@ Max-UInt  Mid-UInt  U> True  Is= IsEmpty
 1234 Invert edcb Is= IsEmpty
 
 \ Header "Variable",0 ; ( "name" -- )  Define a variable word
-Variable V1  0 ,  \ 2Variable
+Variable V1  0 ,  IsEmpty  SeeLatest \ 2Variable
 V1 4 + Here Is= IsEmpty
 
 \ Header "@",0 ; ( addr -- val ) fetch cell
@@ -433,6 +645,9 @@ V1 C@ 56 Is= IsEmpty
 2345 6789 V1 2! IsEmpty
 V1 @ 6789 Is=  V1 2+ @ 2345 Is=  IsEmpty
 V1 2@ 2345 6789 Is2= IsEmpty 
+
+\ Header "+!",ha_Inline ; ( n|u a-addr -- )  Add n | u to the single-cell number at a-addr
+4321 V1 +!  IsEmpty  V1 @ aaaa Is= IsEmpty
 
 Create SBuf  12 C, 34 C, 56 C,
 Create FBuf  0 , 0 ,
@@ -469,29 +684,53 @@ FBUF 1+ FBUF 2 CMove IsEmpty
 CR IsEmpty
 
 \ Header "Space",0 ; ( -- ) emit a space
-Space IsEmpty
+Space IsEmpty  45 Emit IsEmpty
 
 \ Header "Spaces",0 ; ( n -- ) emit n spaces
-4 Spaces IsEmpty
+4 Spaces IsEmpty 45 Emit IsEmpty
 
 \ Header "Type",0 ; ( addr u -- ) transmit u characters from addr
 S" abxy" Dup 4 Is=  Type IsEmpty
 
 \ Header "Accept",0 ; ( bufaddr buflen -- actualLen ) read a line from console into buffer
+
 \ Header ".Hex", 0 ; ( n -- ) Print TOS as hex
 1234 .Hex IsEmpty
 
 \ Header "C.Hex",0 ; ( n -- ) Print TOS as 2-digit hex
 56 C.Hex IsEmpty
 
+\ Header "<#",0 ; ( -- )  init pictured numeric output
+\ Header "#>",0 ; ( d -- adr len )  finish pictured numeric output
+\ Header "Hold",0 ; ( char -- )  prepend char to pictured numeric output string
+\ Header "#",0 ; ( d -- d )  convert 1 digit
+\ Header "#S",0 ; ( d -- d )  convert all digits
+
+\ Header "DU.",0 ; ( ud -- )  print unsigned double
+12345678. DU. IsEmpty
+
 \ Header "U.",0 ; ( u -- )  print as unsigned number
-ffec U. IsEmpty
+fedc U. IsEmpty
+
+\ Header "D.",0 ; ( d -- )  print double signed number
+fedcba98. D.  IsEmpty
+
+\ Header "D.R",0 ; ( d n -- )  print right aligned in n chars
+fedcba98. 12 D.R  IsEmpty
+
+\ Header ".R",0 ; ( nval nchars -- ) print signed number in nchars chars
+fedc 8 .R IsEmpty
 
 \ Header ".", 0 ; ( n -- ) print signed number
-ffec . IsEmpty
+fedc . IsEmpty
 
 \ Header "Execute",0 ; ( xt -- ) execute word by execution token
 1234 ' Dup Execute 1234 Is= 1234 Is= IsEmpty
+
+\ Header "Exit",F_Immediate ; ( -- ) compile return from current colon definition
+: TestExit
+  2345 Exit 3456 ;  SeeLatest  IsEmpty
+TestExit 2345 Is= IsEmpty
 
 \ Header "If",F_Immediate ; ( -- patch_addr )  Compile an If
 \ Header "Else",F_Immediate ; ( patch_addr -- patch2_addr ) Compile "Else"
@@ -559,7 +798,6 @@ Mid-UInt+1 Mid-UInt GD1  Mid-UInt Is= IsEmpty
 : +LoopTest2  0 5 Do  I +  -2 +Loop ;
 20 +LoopTest1 29 Is= IsEmpty
 
-: +!  Dup >R @ + R> ! ;
 VARIABLE gditerations
 VARIABLE gdincrement
 : gd7 ( limit start increment -- )
@@ -593,10 +831,10 @@ Decimal
  -20 29 -10 gd7   5 Is= -11 Is= -1 Is= 9 Is= 19 Is= 29 Is= IsEmpty 
 
 \ With large and small increments
-MAX-UINT 8 RSHIFT 1+ CONSTANT ustep
-ustep NEGATE CONSTANT -ustep
-MAX-INT 7 RSHIFT 1+ CONSTANT step
-step NEGATE CONSTANT -step
+MAX-UINT 8 RSHIFT 1+ Constant ustep
+ustep NEGATE Constant -ustep
+MAX-INT 7 RSHIFT 1+ Constant step
+step NEGATE Constant -step
 VARIABLE bump
 : gd8 bump ! DO 1+ bump @ +LOOP ; IsEmpty
  0 MAX-UINT 0 ustep gd8  256 Is= IsEmpty
@@ -640,17 +878,29 @@ Here 2 - @ 4321 Is= IsEmpty
 Here 56 C, Here - -1 Is= IsEmpty
 Here 1- C@ 56 Is= IsEmpty
 
+\ Header "2,",0 ; ( d -- )  compile double into dictionary
+Here  98765432. 2,
+2@ 98765432. Is2= IsEmpty
+
 \ Header "Compile,",0 ; ( xt -- )  Compile a jsr abs
+Code TestCompile,  ' 1+ Compile,  ;Code  IsEmpty  SeeLatest
+2345 TestCompile, 2346 Is= IsEmpty
 
 \ Header "Jmp,",0 ; ( xt -- )  compile a jmp abs
 
-\ Header "Exit",F_Immediate ; ( -- ) compile return from current colon definition
+\ Header "Ld#,",0 ; ( n -- )  compile lda #
 
-\ Header "Lda#,",0 ; ( n -- )  compile lda #
+\ Header "Ldd#",0 ; ( d -- ) compile ldy # : lda #
 
-\ Header "Literal",F_Immediate ; ( n -- )  Compile inline constant
-: LitTest  6789 ;
-LitTest 6789 Is= IsEmpty
+\ Header "PushA,",0 ; ( -- ) compile PushA
+
+\ Header "Literal",F_Immediate ; ( n -- )  Compile inline Constant
+: LitTest  6789 3456789. ;
+LitTest 3456789. Is2= 6789 Is= IsEmpty
+
+\ ; Header "String,",0  ; ( caddr len xt -- ) compile string
+
+\ Header "Immediate",F_Immediate ; ( -- ) set immediate flag on latest word
 
 \ Header "Header,",0 ; ( addr len -- )  Compile a word header
 \ Header "Name>String",0 ; ( nt -- c-addr u )  Given a name token, return name as a string
@@ -664,9 +914,20 @@ Words IsEmpty
 \ Header "'",0 ; ( "name" -- xt )  find a word
 ' Nip Name>String Type IsEmpty
 
-\ Header "Constant",0 ; ( "name" n -- )  Define a constant word
+\ Header "Constant",0 ; ( "name" n -- )  Define a Constant word
 abcd Constant K1  IsEmpty
 K1 abcd Is= IsEmpty
+
+\ Header "2Constant",0 ; ( "name" d -- )  Define a Constant double word
+12345678. 2Constant K2  IsEmpty
+K2 12345678. Is2= IsEmpty
+
+\ Header "2Variable",0 ; ( "name" -- )  Define a double variable word
+2Variable Var2  IsEmpty
+Here 4 - Var2 Is= IsEmpty
+Var2 2@ 0. Is2= IsEmpty
+
+\ ; Header "Smudge",0 ; ( -- )
 
 \ Header "Create",0 ; ( "name" -- )  Create a word that pushes the addr of it's parameter field
 \ Header "Does>", F_Immediate ;
@@ -676,7 +937,7 @@ def 4321 Is= IsEmpty
 
 \ Header '."',F_Immediate ; ( string" -- )  Type a string literal
 ." Testing1"
-: ."Test ." Testing2" ;
+: ."Test ." Testing2" ;  SeeLatest
 ."Test
 
 \ Header 'S"',F_Immediate ; ( -- caddr len )  create a string literal
@@ -684,9 +945,20 @@ S" test3" Dup 5 Is=  Type  IsEmpty
 : S"Test  S" test3" ;
 S"Test Dup 5 Is=  Type IsEmpty
 
-\ Header "MustBeCompiling",0 ; ( -- ) make sure we're compiling
+\ Header "MustBeCompiling",F_Immediate ; ( -- ) make sure we're compiling
+: TestMBC  MustBeCompiling  ;  SeeLatest  IsEmpty
+TestMBC  IsEmpty
+
 \ Header 'Abort"', F_Immediate ; If f is true, print string & abort
+: TestAbort"  Abort" test" ;  IsEmpty  SeeLatest
+0 TestAbort"
+
+\ Header "User0",0 ; ( -- addr )  Return addr of user area
+User0 400 Is= IsEmpty
+
 \ Header "Latest",0 ; ( -- addr ) address of LATEST variable in user area
+' TestAbort" Latest @ Is= IsEmpty
+
 \ Header "Base",0 ; ( -- addr ) address of BASE variable
 Base @ 10 Is= IsEmpty
 
@@ -696,8 +968,17 @@ State @ 0 Is= IsEmpty
 \ Header ">In",0 ; ( -- addr ) address of >IN variable
 >In @ 6 Is= IsEmpty
 
+\ Header "RandState",0 ; ( -- adr )
+RandState User0 - $ff80 And 0 Is= IsEmpty
+
+\ Header "Temp0",0 ; ( -- adr ) Push addr of Temp0
+Temp0 User0 - $ff80 And 0 Is= IsEmpty
+
 \ Header "Source",0 ; ( -- addr len ) current input source
 Source Type IsEmpty
+
+\ Header "PStack",0 ; ( -- n )  direct-page offset of param stack
+PStack $ff80 And 0 Is= IsEmpty
 
 \ Header "Decimal",0 ; ( -- )  set base to 10
 4 Base !  Decimal  Base @ Hex     0a Is= IsEmpty
@@ -717,6 +998,12 @@ CntBuf Count  3 Is=  Here Is= IsEmpty
 : s12 S" 0aBc" ;
 s11 s12 Compare   1 Is= IsEmpty
 s12 s11 Compare  -1 Is= IsEmpty
+
+\ Header "(",F_Immediate ; (  ccc(paren)  -- )  Comment
+34 ( this is a comment ) 12
+12 Is= 34 Is= IsEmpty
+
+\ Header "\",F_Immediate ; ( -- )  Eat remainder of parse line as a comment
 
 : "abdde"  S" abdde"  ;  IsEmpty
 : "abbde"  S" abbde"  ;  IsEmpty
@@ -754,13 +1041,18 @@ Decimal
 []Test 21 Is= IsEmpty
 Hex
 
+\ Header "Code",0 ; ( "name" -- )  Start a machine code word
+\ Header ";Code",F_Immediate ; ( -- )  End a machine code word
+
 \ Header ":", 0 ; ( "name" -- )  start compiling a new colon word
 \ Header ";",F_Immediate ;  finish compiling a new colon word
 
 \ Header "Dump",0 ; ( caddr len -- )  Dump memory in hex
-400 50 Dump IsEmpty
+400 4e Dump IsEmpty
+
+\ Header "SeeLatest",0 ; ( -- )  show code of latest word
 
 \ Header ".S",0 ; ( -- ) print stack contents non-destructively
-1 2 3 .s  PSP-Reset
+1 2 3 .s  3 Is= 2 Is= 1 Is= IsEmpty
 
 \ Done!
