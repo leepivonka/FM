@@ -4,5 +4,6 @@ This is based on http://forum.6502.org/viewtopic.php?f=9&t=8577 with major chang
 The STC & SGo files are the subroutine-theaded version.
 The ITC & IGo files are the indirect-threaded version.
 The DTC & DGo files are the direct-threaded version.
+The ETC & EGo files are a version where words are subroutines & there is a colon interpreter.
 
 The .HEX files are ready for loading into the 65C265SXB RAM & executing.
