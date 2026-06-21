@@ -73,6 +73,7 @@ P_M	= $20	; M size
 
  .macro INL_End ; end-of-code for inline compile
 	rts
+	.byte $60
 	.endmacro
 
 
@@ -181,7 +182,7 @@ Cold: ; Cold start
 
 	LDA #RSP_Init+UserFirst
 	TAS		; reset return stack
-	LDX #PSP_Init	; reset parameter stack
+	jsr PSP_Reset	; reset parameter stack (& FP stack)
 
 	phk		; Set Data Bank to Code bank ($00)
 	plb
@@ -536,7 +537,7 @@ EnvironmentQ:
 Marker:
 	jsr HeaderComma	; compile word header
 	lda #@Runtime
-	jmp CompileCommaA
+	jmp JsrCommaA
 
 @Runtime:
 	ply		; pop RTS addr
@@ -1423,8 +1424,14 @@ Ahead:
  Header "If",F_Immediate ; ( -- patch_addr )  Compile an If
   ; https://forth-standard.org/standard/core/IF
 If:
-	lda #ZBranch	; compile jsr ZBranch
-	jsr CompileCommaA
+	lda #$e8e8		; compile inx : inx
+	jsr CommaA
+	lda #(PStack-2)<<8+$b5	; compile lda PStack-2,x
+	jsr CommaA
+	lda #$03d0		; compile bne *+5
+	jsr CommaA
+;	lda #ZBranch	; compile jsr ZBranch
+;	jsr JsrCommaA
 	bra Ahead
 
 
@@ -1461,21 +1468,56 @@ Begin:
  Header "Again",F_Immediate ; ( rev_addr -- )  Compile "Again"
   ; https://forth-standard.org/standard/core/AGAIN
 Again:
-	jmp JmpComma	; compile jmp rev_addr
+	lda #$80	; bra
+
+BranchBackComma: ; compile a branch back with opcode in A & addr on PStack
+	pha		; save branch opcode
+	lda PStack,x	; close enough for a branch?
+	sec
+	sbc U_DP
+	dea
+	dea
+	cmp #$80
+	bcc @Ok
+	cmp #$ff80
+	bcs @Ok
+			; out-of-range
+	pla		; get branch opcode
+	cmp #$80	;  bra ?
+	beq @Jmp
+	eor #$20
+	ora #$0300
+	jsr CommaA	; compile branch around
+@Jmp:	jmp JmpComma	; compile jmp back
+
+@Ok:	inx		; Drop xt
+	inx
+	xba		; build branch instruction
+	and #$ff00
+	ora 1,s
+	ply
+	jmp CommaA	; compile branch
 
 
  Header "Until",F_Immediate ; ( rev_addr -- )  Compile "Until"
   ; http://forth-standard.org/standard/core/UNTIL
 Until:
-	lda #ZBranch	; compile jsr ZBranch
-	jsr CompileCommaA
-	bra Again	; compile jmp rev_addr
+;	jsr ZBranchBackComma
+;	rts
+
+ZBranchBackComma: ; ( addr -- )
+	lda #$e8e8	; compile INX : INX
+	jsr CommaA
+	lda #(PStack-2)<<8+$b5 ; compile LDA PStack-2,x
+	jsr CommaA
+	lda #$f0	; compile beq abs
+	bra BranchBackComma
 
 
  Header "While",F_Immediate ; ( rev_addr -- rev_addr fwd_addr )  Compile "While"
   ; http://forth-standard.org/standard/core/WHILE
 While:
-	bra If		; compile jsr ZBranch, remember fwd_addr, compile jmp abs
+	jmp If		; compile jsr ZBranch, remember fwd_addr, compile jmp abs
 
 
  Header "Repeat",F_Immediate ; ( rev_addr fwd_addr -- )  Compile "Repeat"
@@ -1483,7 +1525,7 @@ While:
 Repeat:
 	jsr Swap	; compile jmp rev
 	jsr JmpComma
-	bra Then	; patch jmp fwd
+	jmp Then	; patch jmp fwd
 ;	lda PStack+2,x	; compile jmp rev
 ;	jsr JmpCommaA
 ;	ldy PStack+0,x	; patch jmp fwd
@@ -1509,7 +1551,7 @@ Repeat:
   ; https://forth-standard.org/standard/core/DO
 Do:
 	lda #DoRun
-	jsr CompileCommaA
+	jsr JsrCommaA
 	jmp Here	; remember back_addr
 
 DoRun = TwoToR
@@ -1519,8 +1561,9 @@ DoRun = TwoToR
   ; https://forth-standard.org/standard/core/LOOP
 Loop:
 	lda #LoopRun	; compile jsr LoopRun
-Loop3:	jsr CompileCommaA
-	jmp JmpComma	; compile jmp back
+Loop3:	jsr JsrCommaA
+	lda #$d0	; bne
+	jmp BranchBackComma ; compile jmp back
 
 LoopRun: ; ( -- ) ( R: limit index -- | limit index+1 )  runtime for LOOP
 	lda 3,s		; get index
@@ -1531,13 +1574,10 @@ LoopRun: ; ( -- ) ( R: limit index -- | limit index+1 )  runtime for LOOP
 	rts		; falls into jmp back
 
 DoLoopDone:
-	ply		; save rts addr
-	pla		; RDrop index
-	pla		; RDrop limit
-	iny		; Skip jmp back
-	iny
-	iny
-	phy		; put rts addr back
+	pla		; save rts addr
+	ply		; RDrop index
+	sta 1,s		; put rts addr over limit
+	lda #0		; set P_Z
 	rts
 
 
@@ -1679,7 +1719,7 @@ EndCase:
   ; https://forth-standard.org/standard/core/OF
 Of:
 	lda #@Run	; compile jsr @Run
-	jsr CompileCommaA
+	jsr JsrCommaA
 	jsr Here	; remember nextlink for patch later
 	jmp JmpCommaA	; compile jmp next (unpatched)
 
@@ -1863,7 +1903,7 @@ Postpone:
 
 	jsr LdImmComma	; add code to compile later
 	lda #CompileCommaA
-	bra CompileCommaA
+	bra JsrCommaA
 
 @Immed = CompileComma ; compile normally
   .endif
@@ -1875,7 +1915,7 @@ Recurse:
 	lda U_LatestXt
 CompileCommaA:
 	jsr PushA
-	bra CompileComma
+	bra JsrComma
 
 
  Header "[Compile]",F_Immediate ; ( "name" -- )  compile call to name
@@ -1888,8 +1928,48 @@ BCompile:
  Header "Compile,",0 ; ( xt -- )  Compile a call
   ; https://forth-standard.org/standard/core/COMPILEComma
 CompileComma:
+	ldy PStack,x		; get xt
+	dey
+	dey
+	dey
+	lda a:0,y		; get word flag
+	bit #F_Inline
+	bne @28
+
+  .if 0
+	lda a:3,y		; get 1st opcode
+	and #$ff
+	cmp #$20
+	bne JsrComma
+	lda a:4,y		; get operand
+	cmp #DoVar
+	bne JsrComma
+
+	jsr ToBody		; compile as literal
+	jmp Literal
+    .else
+	bra JsrComma
+    .endif
+
+@21:	jsr CCommaA		; compile a byte
+	inc PStack,x		; on to next source byte
+@28:	lda (PStack,x)
+	cmp #$6060		;  INL_End ?
+	bne @21
+	inx
+	inx
+	rts
+
+
+ Header "Jsr,",0 ; ( xt -- )  Compile JSR abs
+JsrComma:
 	lda #$20	; jsr abs
 	bra LdImmC3
+
+JsrCommaA:
+	jsr PushA
+	bra JsrComma
+
 
  Header "Branch,",0 ; ( xt -- )  compile a branch
 BranchComma:
@@ -1978,7 +2058,7 @@ BChar:
 
 ; Header "String,",0  ; ( caddr len xt -- ) compile string
 StringCommaA:
-	jsr CompileCommaA ; compile jsr xt
+	jsr JsrCommaA	; compile jsr xt
 	lda PStack+0,x	; compile length
 	jsr CommaA
 	jsr Here	; compile chars
@@ -2347,7 +2427,7 @@ To:
 @2VCompile: ; compile code to modify 2Value word operands
 	phy			; save word ptr
 	lda #PopYA
-	jsr CompileCommaA	; compile jsr PopYA
+	jsr JsrCommaA		; compile jsr PopYA
 	lda #$8c		; compile sty abs
 	jsr CCommaA
 	lda 1,s
@@ -2367,13 +2447,14 @@ To:
   ; https://forth-standard.org/standard/core/CREATE
 Create:
 	jsr Code		; compile word header
-	lda #@DoVar		; compile jsr @DoVar
-	jmp CompileCommaA
+	lda #DoVar		; compile jsr @DoVar
+	jmp JsrCommaA
 
-@DoVar: ; Pushes the address of the word body onto parameter stack.
+DoVar: ; Pushes the address of the word body onto parameter stack.
 	pla		; pop rts addr
 	ina		; move to body (after jsr @DoVar)
-	jmp PushA	; Push onto parameter stack
+	PUSHA		; PushA onto parameter stack
+	rts
 
 
  Header "Does>",F_Immediate ;
@@ -2383,12 +2464,12 @@ Create:
   ;	22 abc def  \ use abc to define word def
 Does:
 	lda #@Patch		; compile jsr @Patch into abc
-	jsr CompileCommaA
+	jsr JsrCommaA
 				; start compiling code after Does> into abc
 	lda #$1a68		; compile: pla; ina	get addr of body of def
 	jsr CommaA
 	lda #PushA		; compile jsr PushA
-	jmp CompileCommaA
+	jmp JsrCommaA
 
 
 @Patch:	pla			; pop addr of code after Does> in abc
@@ -2476,10 +2557,50 @@ SQuoteRun: ; ( -- caddr len ) runtime
 	jsr GetInlineString	; jsr to get return stack correct for GetInlineString
 	rts
 
- .if 0
+
+ .if Opt_Full
  Header 'C"',F_Immediate ; ( "ccc<quote>" -- )  create counted string constant
   ; https://forth-standard.org/standard/core/Cq
-CQuote: jsr Abort
+CQuote:
+	jsr ParseQuote		; get string
+				; ( caddr len )
+	lda U_State
+	bne @compile
+
+	pei (U_DP)		; return start of string
+	jsr @CString
+	pla
+	jmp PushA
+
+@compile:
+	lda #CQuoteRun
+	jsr JsrCommaA		; compile jsr
+
+@CString:
+	lda PStack+0,x
+	jsr CCommaA		; compile length byte
+	bra @18
+
+@11:	lda (PStack+2,x)	; compile chars
+	inc PStack+2,x
+	jsr CCommaA
+@18:	dec PStack+0,x
+	bpl @11
+
+	jmp TwoDrop		; save addr
+
+CQuoteRun: ; ( -- caddr ) runtime
+	ply		; get rts addr
+	iny
+	dex		; push caddr
+	dex
+	sty PStack,x
+	lda a:0,y	; get length
+	and #$ff
+	clc		; calc new rts addr
+	adc PStack,x
+	pha		; rts after inline data
+	rts
   .endif
 
 
@@ -2943,7 +3064,11 @@ Fetch:
 Store:
 	lda PStack+2,x	; get val
 	sta (PStack+0,x) ; store at addr
-	jmp TwoDrop	; drop addr val
+	inx		; drop addr
+	inx
+	inx		; drop val
+	inx
+	rts
 
 
  Header "C@",0 ; ( c-addr -- char ) fetch zero-extended char (byte)
@@ -3096,11 +3221,10 @@ Blank:
 ; SECTION 2: RETURN STACK
 
  .if Opt_Full
- Header "RDrop",0 ; ( R: x -- )
+ Header "RDrop",F_Inline ; ( R: x -- ) inline-only
 RDrop:
 	pla
-	sta 1,s
-	rts
+	INL_End
   .endif
 
 
@@ -3449,17 +3573,29 @@ MStarSlash:
   ; Result: TOS = high cell, NOS = low cell
   ; https://forth-standard.org/standard/core/UMTimes
 UMStar:
+	lda PStack+0,x	; u2==0 ?
+	beq @Zero
+	dec PStack+0,x	; correct for carry set for adc
+	lsr PStack+2,x	; get 1st bit of multiplier
 	lda #0		; Clear result.hi
-	ldy #16		; for 16 bits
-@loop:	ror PStack+2,x	;   shift multiplier & result.lo
-	bcc @skip	;   if bit set
-	clc		;     add multiplicand to result.hi
-	adc PStack+0,x
-@skip:	ror a		;   shift result.hi
-	dey		;  next bit
+	ldy #8		; for 8 bit pairs
+@loop:			;   unroll bit processing 2 times for speed
+			;   do 1 bit
+	bcc @skip1	;     if bit set
+	adc PStack+0,x	;       add multiplicand to result.hi
+@skip1:	ror a		;     shift result.hi
+	ror PStack+2,x	;     shift result.lo & multiplier
+			;   do 1 bit
+	bcc @skip2	;     if bit set
+	adc PStack+0,x	;       add multiplicand to result.hi
+@skip2:	ror a		;     shift result.hi
+	ror PStack+2,x	;     shift result.lo & multiplier
+	dey		;  next bit pair
 	bne @loop
 	sta PStack+0,x	; save result.hi
-	ror PStack+2,x	; finish result.lo
+	rts
+
+@Zero:	stz PStack+2,x	; return 0
 	rts
 
 
@@ -3508,6 +3644,7 @@ UNStar:
  Header "M*",0 ; ( a b -- dc ) 16x16 -> 32 signed
   ; https://forth-standard.org/standard/core/MTimes
 MStar:
+ .if 0 ; unsigned multiply
 	lda PStack+0,x	; save result sign
 	eor PStack+2,x
 	php
@@ -3519,15 +3656,63 @@ MStar:
 	bpl @9
 	jmp DNegate
 @9:	rts
+  .else ; Booth multiply
+	lda PStack+0,x	; check for special case
+	cmp #$8000
+	beq @8000
+
+	lda #0		; init result.hi
+	ldy #16		; init bit count
+	lsr PStack+2,x	; get initial multiplier bit
+	bcc @00
+
+@10: ; 0 to 1
+;	sec
+	sbc PStack+0,x	; result.hi -= multiplicand
+@11: ; 1 to 1
+	cmp #$8000
+	ror a
+	ror PStack+2,x	; shift result & multiplier
+	dey
+	beq @9
+	bcs @11
+
+    ; 1 to 0
+;	clc
+	adc PStack+0,x	; result.hi += multiplicand
+@00: ; 0 to 0
+	cmp #$8000
+	ror a
+	ror PStack+2,x	; shift result & multiplier
+	dey
+	beq @9
+	bcc @00
+
+	bra @10
+
+@9:
+	sta PStack+0,x	; store result.hi
+	rts
+
+@8000:	lda #0		; special for n2=$8000
+	sbc PStack+2,x
+	sta PStack+0,x
+	stz PStack+2,x
+	bvs @8000b
+	jmp DTwoSlash
+
+@8000b:	lsr PStack+0,x
+	rts
+  .endif
 
 
- Header "*",0 ; ( a b -- a*b ) 16x16 -> 16 (low word)
+ Header "*",F_Inline ; ( a b -- a*b ) 16x16 -> 16 (low word)
   ; https://forth-standard.org/standard/core/Times
 Star:
 	jsr UMStar
 	inx		; drop hi word
 	inx
-	rts
+	INL_End
 
 
  Header "UN/Mod",0 ; ( ud u -- udq ur )  unsigned 32/16 -> 32 quotient, 16 remainder
@@ -3571,9 +3756,57 @@ UNSlashMod:
   ; This is a standard 32/16 non-restoring division
   ; https://forth-standard.org/standard/core/UMDivMOD
 UMSlashMod:
+  .if 1
+	POPA		; divisor
+UMSlashModA:
+	sta Temp0
+	; compare for overflow goes here
+    .if 1 ; handle power of 2
+	eor #$ffff	; check divisor for power of 2
+	ina
+	and Temp0
+	cmp Temp0
+	bne @199
+
+	dea		; mask to get remainder
+	and PStack+2,x
+	tay
+
+	lda PStack+2,x	; shift to get quotient
+	sty PStack+2,x
+	bra @148
+@142:	lsr PStack+0,x
+	ror a
+@148:	lsr Temp0
+	bne @142
+	sta PStack+0,x
+	rts
+
+@199:			; divisor not power of 2
+      .endif
+
+	lda PStack+0,x	; dividend.hi
+	asl PStack+2,x	; shift dividend.lo
+	ldy #16		; for 16 bits
+@11:    rol a		;   Shift dividend.hi
+	bcs @24
+	cmp Temp0	;   will it fit?
+	bcc @27
+@24:	sbc Temp0	;     subtract divisor
+	sec
+@27:
+	rol PStack+2,x	;   shift dividend & quotient lo & mid
+	dey
+	bne @11		;  next bit
+	ldy PStack+2,x	; move quotient
+	sty PStack+0,x
+	sta PStack+2,x	; save remainder
+	rts
+   .else
 	jsr UNSlashMod
 	jsr Nip
 	jmp Swap
+   .endif
 
 
  .if Opt_Full
@@ -3609,14 +3842,20 @@ FMSMod:
   ; lies outside the range of a single-cell signed integer.
   ; http://forth-standard.org/standard/core/SMDivREM
 SMSRem:
-	jsr ToR		; save divisor
+	POPA		; save divisor
+SMSRemA:
+	pha
 	lda PStack+0,x	; save dividend sign
 	pha
-	jsr DAbs	; make dividend positive
-	lda 3,s
-	jsr PushA	; get abs(divisor)
-	jsr Abs
-	jsr UMSlashMod	; unsigned divide
+	bpl @19
+	jsr DNegate	; make dividend positive
+@19:
+	lda 3,s		; get abs(divisor)
+	bpl @29
+	eor #$ffff
+	ina
+@29:
+	jsr UMSlashModA	; unsigned divide
 	lda 3,s		; correct quotient sign
 	eor 1,s
 	bpl @5
@@ -3640,10 +3879,11 @@ SMSRem:
   ; FM/MOD or the phrase >R S>D R> SM/REM.
   ; https://forth-standard.org/standard/core/DivMOD
 SlashMod:
-	jsr ToR
+	POPA
+	pha
 	jsr SToD
-	jsr RFrom
-	bra SMSRem
+	pla
+	bra SMSRemA
 
 
  Header "Mod",0 ; ( n1 n2 -- rem ) signed remainder
@@ -3665,10 +3905,16 @@ Slash:
  Header "*/Mod",0 ; ( n1 nmul ndiv -- nrem nquo )
   ; https://forth-standard.org/standard/core/TimesDivMOD
 StarSlashMod:
-	jsr ToR
-	jsr MStar
-	jsr RFrom
-	bra SMSRem
+;	POPA		; >R
+;	pha
+	inx		; ignore ndiv for now; M* doesn't hurt it 
+	inx
+	jsr MStar	; M*
+;	pla		; R>
+;	PUSHA
+	dex		; get saved ndiv back
+	dex
+	bra SMSRem	; SM/Rem
 
 
  Header "*/",0 ; ( n1 nmul ndiv -- nquo )
@@ -3726,28 +3972,32 @@ DAbs:
 	rts
 
 
- Header "LShift",0 ; ( n1 u -- n2 )  shift left by u
+ Header "LShift",0 ; ( x1 u -- x2 )  shift left by u
   ; https://forth-standard.org/standard/core/LSHIFT
-LShift:	ldy PStack+0,x	; get u (shift count)
+LShift:	inx
+	inx
+	ldy PStack-2,x	; pop u (shift count)
 	beq @done
-@loop:	asl PStack+2,x	; shift a
+	lda PStack,x
+@loop:	asl a
 	dey
 	bne @loop
-@done:	inx		; Drop u
-	inx
-	rts
+	sta PStack,x
+@done:	rts
 
 
  Header "RShift",0 ; ( n1 u -- n2 ) logical shift right by u
   ; https://forth-standard.org/standard/core/RSHIFT
-RShift:	ldy PStack+0,x	; get u (shift count)
+RShift:	inx
+	inx
+	ldy PStack-2,x	; pop u (shift count)
 	beq @done
-@loop:	lsr PStack+2,x	; shift a
+	lda PStack,x
+@loop:	lsr a
 	dey
 	bne @loop
-@done:	inx		; Drop u
-	inx
-	rts
+	sta PStack,x
+@done:	rts
 
 
  Header "2*",F_Inline ; ( n -- n*2 )  shift left
@@ -3765,19 +4015,21 @@ DTwoStar:
 	INL_End
 
 
- Header "2/",0 ; ( n1 -- n2 ) signed shift right
+ Header "2/",F_Inline ; ( n1 -- n2 ) signed shift right
   ; https://forth-standard.org/standard/core/TwoDiv
 TwoSlash:
-	LDA PStack,x
+	lda PStack,x
 	asl a		; Arithmetic shift right: preserve sign bit
-	ROR PStack,x	; Shift right, sign bit from carry
-	rts
+	ror PStack,x	; Shift right, sign bit from carry
+	INL_End
 
 
  Header "D2/",0 ; ( d1 -- d2 ) double signed shift right
   ; https://forth-standard.org/standard/double/DTwoDiv
 DTwoSlash:
-	jsr TwoSlash
+	lda PStack,x
+	asl a		; Arithmetic shift right: preserve sign bit
+	ror PStack,x	; Shift right, sign bit from carry
 	ror PStack+2,x
 	rts
 
@@ -3802,10 +4054,11 @@ OnePlus:
 	INL_End
 
 
- Header "2+",0 ; ( n1 -- n2 )  increment by 2
+ Header "2+",F_Inline ; ( n1 -- n2 )  increment by 2
 TwoPlus:
 	inc PStack,x
-	bra OnePlus
+	inc PStack,x
+	INL_End
 
 
  Header "1-",F_Inline ; ( n1 -- n2 )  decrement
@@ -3834,12 +4087,12 @@ Abs:
 
 
   .if Opt_Full
- Header "><",0 ; ( x1 -- x2 )  Swap byte order in cell
+ Header "><",F_Inline ; ( x1 -- x2 )  Swap byte order in cell
 SwapB:
 	lda PStack,x
 	xba
 	sta PStack,x
-	rts
+	INL_End
    .endif
 
 
@@ -3927,11 +4180,13 @@ True:
 TrueValue = $ffff
 
 
- Header "False",0 ; ( -- f )
+ Header "False",F_Inline ; ( -- f )
   ; https://forth-standard.org/standard/core/FALSE
 False:
-	lda #FalseValue
-	bra PushA
+	dex
+	dex
+	stz PStack,x
+	INL_End
 FalseValue = 0
 
 
@@ -3965,19 +4220,22 @@ Xor1:
 ; SECTION 1: PARAMETER STACK
 
 
- Header "Nip",0 ; ( x1 x2 -- x2 )
+ Header "Nip",F_Inline ; ( x1 x2 -- x2 )
   ; https://forth-standard.org/standard/core/NIP
 Nip:
 	LDA PStack,X	; x2
 NipA:	INX
 	INX
 	STA PStack,X	; Overwrite x1
-	rts
+	INL_End
 
 
  Header "PSP-Reset",0 ; ( ... -- )  clear parameter stack
 PSP_Reset:
-	ldx #PSP_Init
+	ldx #PSP_Init	; clear parameter stack
+	lda U_FSEmptyP1	; clear floating-point stack
+	dea
+	sta U_FSP
 	rts
 
 
@@ -3989,14 +4247,14 @@ Zero:
   .endif
 
 
- Header "Dup",0 ; ( x -- x x )
+ Header "Dup",F_Inline ; ( x -- x x )
   ; https://forth-standard.org/standard/core/DUP
 Dup:
 	LDA PStack,X	; Load TOS
 PushA:	DEX		; Push A
 	DEX
 	STA PStack,x
-	rts
+	INL_End
 
 
  Header "?Dup",0 ; ( x -- 0 | x x )
@@ -4007,11 +4265,12 @@ QDup:
 	rts
 
 
- Header "Over",0 ; ( x1 x2 -- x1 x2 x1 )
+ Header "Over",F_Inline ; ( x1 x2 -- x1 x2 x1 )
   ; https://forth-standard.org/standard/core/OVER
 Over:
 	LDA PStack+2,X	; x1
-	bra PushA
+	PUSHA
+	INL_End
 
 
  Header "Drop",F_Inline ; ( x -- )
@@ -4051,12 +4310,14 @@ Tuck:
 	bra PushA	; New TOS = x2
 
 
- Header "2Drop",0 ; ( x1 x2 -- )
+ Header "2Drop",F_Inline ; ( x1 x2 -- )
   ; https://forth-standard.org/standard/core/TwoDROP
 TwoDrop:
-	INX
-	INX
-	bra Drop
+	inx
+	inx
+	inx
+	inx
+	INL_End
 
 
 ; Header "3Drop",0 ; ( x1 x2 x3 -- )
@@ -4066,6 +4327,7 @@ ThreeDrop:
 	bra TwoDrop	; Drop x2 x1
 
 
+; Header "PopYA",0 ; ( d -- YA )
 PopYA:
 	inx
 	inx
